@@ -3,110 +3,91 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FinOps Tracker - Data Architecture</title>
+  <title>FinOps Tracker - Multi-Tenant Architecture</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen">
+<body class="bg-slate-950 text-slate-100 min-h-screen pb-10">
 
+  <!-- Navbar Multi-Tenant -->
   <nav class="bg-slate-900/95 backdrop-blur border-b border-slate-800 sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center space-x-3">
         <div class="bg-emerald-500/20 text-emerald-400 p-2 rounded-lg border border-emerald-500/30">
-          <i class="fa-solid fa-layer-group text-xl"></i>
+          <i class="fa-solid fa-server text-xl"></i>
         </div>
         <div>
           <h1 class="font-bold text-lg leading-none">FinOps Tracker</h1>
-          <span class="text-xs text-slate-400">Control Presupuestal & Analítica</span>
+          <span class="text-xs text-slate-400">Multi-Profile & Goal Analytics</span>
         </div>
       </div>
-      <div class="flex items-center space-x-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
-        <label class="text-xs text-slate-400"><i class="fa-regular fa-calendar mr-1"></i>Periodo:</label>
-        <input type="month" id="monthSelector" class="bg-transparent text-sm font-semibold text-emerald-400 focus:outline-none cursor-pointer" />
+      <div class="flex items-center space-x-4">
+        <!-- Selector de Perfil -->
+        <div class="flex items-center space-x-2 bg-indigo-900/40 px-3 py-1.5 rounded-lg border border-indigo-500/30">
+          <i class="fa-solid fa-user-astronaut text-indigo-400 text-sm"></i>
+          <select id="profileSelector" class="bg-transparent text-sm font-bold text-indigo-300 focus:outline-none cursor-pointer">
+            <option value="Usuario1">Mi Perfil</option>
+            <option value="Usuario2">Perfil Pareja</option>
+          </select>
+        </div>
+        <!-- Selector de Mes -->
+        <div class="flex items-center space-x-2 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
+          <i class="fa-regular fa-calendar text-slate-400 text-sm"></i>
+          <input type="month" id="monthSelector" class="bg-transparent text-sm font-semibold text-emerald-400 focus:outline-none cursor-pointer" />
+        </div>
       </div>
     </div>
   </nav>
 
   <main class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
     
-    <!-- Columna Izquierda: Ingresos y Gastos -->
+    <!-- MÓDULO FINANCIERO (Izquierda 4 cols, Derecha 8 cols) -->
     <div class="lg:col-span-4 space-y-6">
       
-      <!-- Módulo Planilla -->
+      <!-- Estructura de Ingresos (Planilla) -->
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
-        <h2 class="text-sm font-bold text-slate-100 mb-4 border-b border-slate-800 pb-2 flex justify-between items-center">
-          <span><i class="fa-solid fa-money-check-dollar text-indigo-400 mr-2"></i>Estructura de Ingresos</span>
+        <h2 class="text-sm font-bold text-slate-100 mb-4 border-b border-slate-800 pb-2">
+          <i class="fa-solid fa-money-check-dollar text-emerald-400 mr-2"></i>Nómina & Retenciones
         </h2>
-        
-        <form id="incomeForm" class="space-y-4" onsubmit="event.preventDefault();">
+        <form class="space-y-4" onsubmit="event.preventDefault();">
           <div>
             <label class="text-xs text-slate-400 block mb-1">Sueldo Bruto Mensual (S/)</label>
-            <div class="flex space-x-2">
-              <input type="number" id="grossInput" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-emerald-500 focus:outline-none transition-colors" placeholder="Ej. 6500">
-            </div>
+            <input type="number" id="grossInput" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-emerald-500 focus:outline-none transition-colors" placeholder="Ej. 6500">
           </div>
-          
           <div class="grid grid-cols-2 gap-2 text-xs">
             <div>
-              <label class="text-slate-400 block mb-1">Pensión (Retención)</label>
+              <label class="text-slate-400 block mb-1">Pensión</label>
               <select id="pensionType" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-200">
-                <option value="AFP">AFP (~12.5%)</option>
-                <option value="ONP">ONP (13.0%)</option>
+                <option value="AFP">AFP</option>
+                <option value="ONP">ONP</option>
               </select>
             </div>
             <div>
-              <label class="text-slate-400 block mb-1">Salud (Aporte Empleador)</label>
+              <label class="text-slate-400 block mb-1">Salud</label>
               <select id="healthType" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-200">
-                <option value="ESSALUD">EsSalud (9.0%)</option>
-                <option value="EPS">EPS (6.75%)</option>
+                <option value="ESSALUD">EsSalud</option>
+                <option value="EPS">EPS</option>
               </select>
             </div>
           </div>
-
-          <!-- Transparencia de Descuentos -->
           <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 mt-2 value-update">
-            <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 border-b border-slate-800 pb-1">Retenciones al Trabajador</h3>
             <div class="flex justify-between text-xs text-slate-300 mb-1">
-              <span id="lblPensionName">AFP (~12.5%)</span> 
-              <span id="lblPensionAmount" class="text-rose-400 font-medium">-S/ 0.00</span>
-            </div>
-            <div class="flex justify-between text-xs text-slate-300 mb-2">
-              <span>Renta 5ta Cat. (Estimada)</span> 
-              <span id="lblTaxAmount" class="text-rose-400 font-medium">-S/ 0.00</span>
+              <span>Desc. Pensión/Renta:</span> <span id="lblDeductions" class="text-rose-400 font-medium">-S/ 0.00</span>
             </div>
             <div class="flex justify-between items-center pt-2 border-t border-slate-800">
-              <span class="text-xs font-bold text-slate-200">Neto Disponible (Liquidez):</span>
+              <span class="text-xs font-bold text-slate-200">Neto Liquidez:</span>
               <span id="lblNet" class="text-lg font-black text-emerald-400">S/ 0.00</span>
-            </div>
-          </div>
-
-          <!-- Transparencia Beneficios -->
-          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 mt-2 value-update">
-            <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 border-b border-slate-800 pb-1">Aportes Patronales & Provisiones</h3>
-            <div class="flex justify-between text-xs text-slate-300 mb-2">
-              <span id="lblHealthName">EsSalud (9.0%)</span> 
-              <span id="lblHealthAmount" class="text-blue-400 font-medium">+S/ 0.00 (No descuenta)</span>
-            </div>
-            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
-              <div class="text-center">
-                <span class="block text-[10px] text-indigo-300">CTS Semestral</span>
-                <span id="lblCts" class="text-xs font-bold text-indigo-400">S/ 0.00</span>
-              </div>
-              <div class="text-center border-l border-slate-800">
-                <span class="block text-[10px] text-indigo-300">Grati (Jul/Dic)</span>
-                <span id="lblGrati" class="text-xs font-bold text-indigo-400">S/ 0.00</span>
-              </div>
             </div>
           </div>
         </form>
       </div>
 
-      <!-- Módulo Agregar Gasto -->
+      <!-- Registro de Gastos -->
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
         <h2 class="text-sm font-bold text-slate-100 mb-4 border-b border-slate-800 pb-2">
-          <i class="fa-solid fa-cart-plus text-amber-400 mr-2"></i>Registrar Obligación
+          <i class="fa-solid fa-cart-plus text-amber-400 mr-2"></i>Obligaciones del Mes
         </h2>
         <form id="expenseForm" class="space-y-3">
           <input type="text" id="expName" required placeholder="Descripción (Ej. Universidad)" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-amber-500 focus:outline-none">
@@ -118,22 +99,17 @@
               <option value="Servicios">Servicios</option>
               <option value="Hogar">Hogar</option>
               <option value="Alimentación">Alimentación</option>
-              <option value="Deudas">Deudas</option>
               <option value="Ocio">Ocio</option>
             </select>
           </div>
-          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg text-sm transition">
-            Añadir Gasto
-          </button>
+          <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg text-sm transition">Añadir Gasto</button>
         </form>
       </div>
-
     </div>
 
-    <!-- Columna Derecha: Dashboard y Listas -->
     <div class="lg:col-span-8 space-y-6">
       
-      <!-- KPIs Analíticos -->
+      <!-- KPIs Core -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow value-update">
           <span class="text-xs text-slate-400">Total Fijos</span>
@@ -148,41 +124,66 @@
           <div id="kpiSurplus" class="text-xl font-bold text-indigo-400 mt-1">S/ 0.00</div>
         </div>
         <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow value-update">
-          <span class="text-xs text-slate-400">Salud Financiera</span>
+          <span class="text-xs text-slate-400">Flujo Libre</span>
           <div id="kpiHealth" class="text-xl font-bold text-amber-400 mt-1">0%</div>
-          <span class="text-[9px] text-slate-500">Ratio Gasto/Neto</span>
         </div>
       </div>
 
-      <!-- Gráficos Interactivos -->
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="text-sm font-bold text-slate-100">
-            <i class="fa-solid fa-chart-simple text-emerald-400 mr-2"></i>Distribución & Analítica
-          </h2>
-          <select id="chartFilter" class="bg-slate-950 border border-slate-700 rounded text-xs text-slate-300 p-1">
-            <option value="bar">Barras (Categorías)</option>
-            <option value="doughnut">Anillo (Proporción)</option>
-          </select>
+      <!-- Gráfico y Lista de Gastos -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+          <h2 class="text-sm font-bold text-slate-100 mb-4"><i class="fa-solid fa-chart-pie text-indigo-400 mr-2"></i>Distribución</h2>
+          <div class="w-full h-48"><canvas id="mainChart"></canvas></div>
         </div>
-        <div class="w-full h-64">
-          <canvas id="mainChart"></canvas>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
+          <h2 class="text-sm font-bold text-slate-100 mb-4 border-b border-slate-800 pb-2"><i class="fa-solid fa-list-check text-emerald-400 mr-2"></i>Ejecución Real</h2>
+          <div id="expenseList" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-2"></div>
         </div>
       </div>
-
-      <!-- Control de Gastos Activos -->
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
-        <h2 class="text-sm font-bold text-slate-100 mb-4 border-b border-slate-800 pb-2">
-          <i class="fa-solid fa-list-check text-indigo-400 mr-2"></i>Control de Ejecución
-        </h2>
-        <div id="expenseList" class="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-2">
-          <!-- Inyectado por JS -->
-        </div>
-      </div>
-
     </div>
+
+    <!-- MÓDULO: ALCANCÍA DE OBJETIVOS (Full width) -->
+    <div class="lg:col-span-12 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg mt-4">
+      <div class="flex justify-between items-end mb-6 border-b border-slate-800 pb-3">
+        <div>
+          <h2 class="text-lg font-bold text-slate-100 flex items-center">
+            <i class="fa-solid fa-piggy-bank text-rose-400 mr-2 text-2xl"></i> Alcancía de Objetivos (Metas)
+          </h2>
+          <p class="text-xs text-slate-400 mt-1">Simulación de ahorro y recomendación de instrumentos financieros.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Formulario Metas -->
+        <div class="bg-slate-950 p-5 rounded-xl border border-slate-700">
+          <h3 class="text-sm font-bold text-slate-200 mb-4">Nueva Meta</h3>
+          <form id="goalForm" class="space-y-4">
+            <div>
+              <label class="text-xs text-slate-400 block mb-1">Nombre (Ej. Viaje, Auto, Inicial Depto)</label>
+              <input type="text" id="goalName" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-rose-400 focus:outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">Monto Total (S/)</label>
+                <input type="number" id="goalTarget" required step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-rose-400 focus:outline-none">
+              </div>
+              <div>
+                <label class="text-xs text-slate-400 block mb-1">Aporte Mensual (S/)</label>
+                <input type="number" id="goalMonthly" required step="0.01" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-rose-400 focus:outline-none">
+              </div>
+            </div>
+            <button type="submit" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2 rounded-lg text-sm transition">Crear Plan de Ahorro</button>
+          </form>
+        </div>
+
+        <!-- Renderizado de Metas -->
+        <div class="lg:col-span-2 space-y-4 max-h-80 overflow-y-auto custom-scrollbar pr-2" id="goalsContainer">
+          <!-- Dinámico -->
+        </div>
+      </div>
+    </div>
+
   </main>
-  
   <script src="js/app.js"></script>
 </body>
 </html>
