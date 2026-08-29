@@ -1,42 +1,57 @@
-const UIT = 5350; 
+// ==========================================
+// CONFIGURACIÓN DE SISTEMA Y MIGRACIÓN (ACID)
+// ==========================================
+const UIT = 5350; // UIT 2026 Perú
 let chartInstance = null;
 let currentMonth = new Date().toISOString().slice(0, 7); 
 let activeUser = null; 
 
+// Captura de fecha estricta Lima/Perú
 function getPeruDate() {
   return new Intl.DateTimeFormat('en-CA', { 
     timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' 
   }).format(new Date());
 }
 
-let db = JSON.parse(localStorage.getItem('finops_db_secure'));
+// 1. Script de Migración Automática (Preservación de Datos Viejos)
+let db = JSON.parse(localStorage.getItem('finops_db_prod'));
 
 if (!db) {
-  db = { 
-    profiles: {
-      "Ricardo": { passwordHash: null, months: {}, goals: [] },
-      "Ivechi": { passwordHash: null, months: {}, goals: [] }
-    } 
-  };
-  localStorage.setItem('finops_db_secure', JSON.stringify(db));
-} else if (db.profiles["Pareja"]) {
-    db.profiles["Ivechi"] = db.profiles["Pareja"];
-    delete db.profiles["Pareja"];
-    localStorage.setItem('finops_db_secure', JSON.stringify(db));
+  // Buscar bases de datos anteriores si existen para no perder información
+  const legacyDB = JSON.parse(localStorage.getItem('finops_db_secure')) || JSON.parse(localStorage.getItem('finops_db_v2'));
+  
+  if (legacyDB && legacyDB.profiles) {
+    db = legacyDB; 
+    // Migración de nomenclatura solicitada
+    if (db.profiles["Pareja"]) {
+        db.profiles["Ivechi"] = db.profiles["Pareja"];
+        delete db.profiles["Pareja"];
+    }
+  } else {
+    // Instalación limpia
+    db = { profiles: { "Ricardo": { passwordHash: null, months: {}, goals: [] }, "Ivechi": { passwordHash: null, months: {}, goals: [] } } };
+  }
+  localStorage.setItem('finops_db_prod', JSON.stringify(db));
 }
 
+// ==========================================
+// Mapeo del DOM
+// ==========================================
 const dom = {
   loginScreen: document.getElementById('loginScreen'),
   appScreen: document.getElementById('appScreen'),
+  
+  tabLogin: document.getElementById('tabLogin'),
+  tabRegister: document.getElementById('tabRegister'),
+  authForm: document.getElementById('loginForm'),
+  registerForm: document.getElementById('registerForm'),
+  
   authProfile: document.getElementById('authProfile'),
   authPassword: document.getElementById('authPassword'),
   authMessage: document.getElementById('authMessage'),
   authError: document.getElementById('authError'),
-  authForm: document.getElementById('loginForm'),
+  authBtn: document.getElementById('authBtn'),
   
-  tabLogin: document.getElementById('tabLogin'),
-  tabRegister: document.getElementById('tabRegister'),
-  registerForm: document.getElementById('registerForm'),
   regProfileName: document.getElementById('regProfileName'),
   regPassword: document.getElementById('regPassword'),
 
@@ -55,6 +70,9 @@ const dom = {
   kpis: { total: document.getElementById('kpiTotalExp'), paid: document.getElementById('kpiPaid'), surplus: document.getElementById('kpiSurplus'), health: document.getElementById('kpiHealth') }
 };
 
+// ==========================================
+// SEGURIDAD Y ENCRIPTACIÓN (Capa Cliente)
+// ==========================================
 async function hashPassword(password) {
   const msgBuffer = new TextEncoder().encode(password);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -62,20 +80,27 @@ async function hashPassword(password) {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// ==========================================
+// CONTROLADOR DE ACCESO (Auth)
+// ==========================================
 function initAuth() {
   loadProfiles();
-  checkProfileStatus();
+  checkProfileStatus(); // Validación inicial segura
+  
   dom.authProfile.addEventListener('change', checkProfileStatus);
   dom.authForm.addEventListener('submit', handleLogin);
+  dom.registerForm.addEventListener('submit', handleRegister);
   
   dom.tabLogin.addEventListener('click', () => switchTab('login'));
   dom.tabRegister.addEventListener('click', () => switchTab('register'));
-  dom.registerForm.addEventListener('submit', handleRegister);
 }
 
 function loadProfiles() {
     dom.authProfile.innerHTML = '';
-    Object.keys(db.profiles).forEach(p => { 
+    const profiles = Object.keys(db.profiles);
+    if (profiles.length === 0) return;
+    
+    profiles.forEach(p => { 
         dom.authProfile.innerHTML += `<option value="${p}">${p}</option>`; 
     });
 }
@@ -99,17 +124,21 @@ function switchTab(tab) {
 }
 
 function checkProfileStatus() {
-  if(Object.keys(db.profiles).length === 0) return;
   const selected = dom.authProfile.value;
   dom.authError.classList.add('hidden');
   dom.authPassword.value = '';
   
-  if (db.profiles[selected] && db.profiles[selected].passwordHash === null) {
+  if (!selected || !db.profiles[selected]) {
+      dom.authMessage.classList.add('hidden');
+      return;
+  }
+  
+  if (db.profiles[selected].passwordHash === null) {
     dom.authMessage.classList.remove('hidden');
-    document.getElementById('authBtn').innerText = 'Registrar Contraseña & Entrar';
+    dom.authBtn.innerText = 'Registrar Contraseña & Entrar';
   } else {
     dom.authMessage.classList.add('hidden');
-    document.getElementById('authBtn').innerText = 'Validar Acceso';
+    dom.authBtn.innerText = 'Validar Acceso';
   }
 }
 
@@ -119,21 +148,24 @@ async function handleRegister(e) {
     const pwd = dom.regPassword.value;
     
     if(db.profiles[name]) {
-        alert("Ese nombre de perfil ya existe en este dispositivo.");
+        alert("Ese nombre de perfil ya existe en este dispositivo. Elige otro.");
         return;
     }
     
+    // Inserción en la base de datos local
     const hashed = await hashPassword(pwd);
     db.profiles[name] = { passwordHash: hashed, months: {}, goals: [] };
-    localStorage.setItem('finops_db_secure', JSON.stringify(db));
+    localStorage.setItem('finops_db_prod', JSON.stringify(db));
     
     dom.regProfileName.value = '';
     dom.regPassword.value = '';
+    
+    // Recargar vista
     loadProfiles();
     switchTab('login');
     dom.authProfile.value = name;
     checkProfileStatus();
-    alert(`Perfil '${name}' creado exitosamente. Ya puedes iniciar sesión.`);
+    alert(`Instancia de perfil '${name}' creada exitosamente.`);
 }
 
 async function handleLogin(e) {
@@ -146,7 +178,7 @@ async function handleLogin(e) {
 
   if (profile.passwordHash === null) {
     profile.passwordHash = hashed;
-    localStorage.setItem('finops_db_secure', JSON.stringify(db));
+    localStorage.setItem('finops_db_prod', JSON.stringify(db));
     loginSuccess(selected);
   } else {
     if (profile.passwordHash === hashed) loginSuccess(selected);
@@ -160,12 +192,11 @@ function loginSuccess(username) {
   dom.loginScreen.classList.add('hidden');
   dom.appScreen.classList.remove('hidden');
   dom.monthSelector.value = currentMonth;
-  
   dom.expDate.value = getPeruDate();
   
   ensureDataContext();
   attachDashboardListeners();
-  renderAll();
+  renderAll(); // Carga de datos inmediata
 }
 
 window.logout = function() {
@@ -176,18 +207,16 @@ window.logout = function() {
   checkProfileStatus();
 };
 
+// ==========================================
+// CAPTURA VISUAL (Exportación a PNG)
+// ==========================================
 window.exportDashboard = function() {
   const node = document.getElementById('exportableArea');
   const noPrintElements = document.querySelectorAll('.no-print, .delete-btn, .action-btn');
   
   noPrintElements.forEach(el => el.style.display = 'none');
 
-  html2canvas(node, { 
-    backgroundColor: '#020617', 
-    scale: 2,
-    useCORS: true,
-    logging: false
-  }).then(canvas => {
+  html2canvas(node, { backgroundColor: '#020617', scale: 2, useCORS: true, logging: false }).then(canvas => {
     const link = document.createElement('a');
     link.download = `Reporte_${activeUser}_${currentMonth}.png`;
     link.href = canvas.toDataURL('image/png');
@@ -198,13 +227,19 @@ window.exportDashboard = function() {
   });
 };
 
+// ==========================================
+// CONTROLADOR DE APLICACIÓN CENTRAL (CRUD)
+// ==========================================
 let listenersAttached = false;
 function attachDashboardListeners() {
   if (listenersAttached) return;
   dom.monthSelector.addEventListener('change', (e) => { currentMonth = e.target.value; ensureDataContext(); renderAll(); });
+  
+  // Reactividad en tiempo real en la Nómina
   dom.grossInput.addEventListener('input', updateIncomeData);
   dom.pensionType.addEventListener('change', updateIncomeData);
   dom.healthType.addEventListener('change', updateIncomeData);
+  
   dom.expForm.addEventListener('submit', addExpense);
   dom.goalForm.addEventListener('submit', addGoal);
   listenersAttached = true;
@@ -213,17 +248,20 @@ function attachDashboardListeners() {
 function ensureDataContext() {
   if (!db.profiles[activeUser].months[currentMonth]) {
     db.profiles[activeUser].months[currentMonth] = { gross: 0, pension: 'AFP', health: 'ESSALUD', expenses: [] };
-    localStorage.setItem('finops_db_secure', JSON.stringify(db));
+    localStorage.setItem('finops_db_prod', JSON.stringify(db));
   }
 }
 
 function updateIncomeData() {
+  if(!activeUser) return;
   const monthData = db.profiles[activeUser].months[currentMonth];
   monthData.gross = parseFloat(dom.grossInput.value) || 0;
   monthData.pension = dom.pensionType.value;
   monthData.health = dom.healthType.value;
-  localStorage.setItem('finops_db_secure', JSON.stringify(db));
-  renderAll();
+  localStorage.setItem('finops_db_prod', JSON.stringify(db));
+  
+  // El renderizado reactivo se ejecuta sin recargar
+  renderAll(); 
 }
 
 function addExpense(e) {
@@ -237,7 +275,7 @@ function addExpense(e) {
     db.profiles[activeUser].months[currentMonth].expenses.push({ 
       id: Date.now().toString(), name, amount, category, date, paid: false 
     });
-    localStorage.setItem('finops_db_secure', JSON.stringify(db));
+    localStorage.setItem('finops_db_prod', JSON.stringify(db));
     document.getElementById('expName').value = '';
     document.getElementById('expAmount').value = '';
     dom.expDate.value = getPeruDate();
@@ -253,12 +291,13 @@ function addGoal(e) {
 
   if (name && target > 0 && monthly > 0) {
     db.profiles[activeUser].goals.push({ id: Date.now().toString(), name, target, monthly, current: 0 });
-    localStorage.setItem('finops_db_secure', JSON.stringify(db));
+    localStorage.setItem('finops_db_prod', JSON.stringify(db));
     dom.goalForm.reset();
     renderAll();
   }
 }
 
+// Inyección de aportes incrementales en Metas
 window.addFundsToGoal = function(id) {
   const input = document.getElementById(`fund_${id}`);
   const amount = parseFloat(input.value);
@@ -268,7 +307,7 @@ window.addFundsToGoal = function(id) {
     if (goal) {
       goal.current += amount;
       if (goal.current > goal.target) goal.current = goal.target;
-      localStorage.setItem('finops_db_secure', JSON.stringify(db));
+      localStorage.setItem('finops_db_prod', JSON.stringify(db));
       renderAll();
     }
   }
@@ -276,34 +315,37 @@ window.addFundsToGoal = function(id) {
 
 window.togglePaid = function(id) {
   const exp = db.profiles[activeUser].months[currentMonth].expenses.find(x => x.id === id);
-  if (exp) { exp.paid = !exp.paid; localStorage.setItem('finops_db_secure', JSON.stringify(db)); renderAll(); }
+  if (exp) { exp.paid = !exp.paid; localStorage.setItem('finops_db_prod', JSON.stringify(db)); renderAll(); }
 };
 
 window.deleteExpense = function(id) {
   db.profiles[activeUser].months[currentMonth].expenses = db.profiles[activeUser].months[currentMonth].expenses.filter(x => x.id !== id);
-  localStorage.setItem('finops_db_secure', JSON.stringify(db));
+  localStorage.setItem('finops_db_prod', JSON.stringify(db));
   renderAll();
 };
 
 window.deleteGoal = function(id) {
   db.profiles[activeUser].goals = db.profiles[activeUser].goals.filter(x => x.id !== id);
-  localStorage.setItem('finops_db_secure', JSON.stringify(db));
+  localStorage.setItem('finops_db_prod', JSON.stringify(db));
   renderAll();
 }
 
+// ==========================================
+// ASESOR FINANCIERO Y MOTOR DE RENDERIZADO
+// ==========================================
 function getRecommendationInsight(monthsRequired) {
-  if (monthsRequired >= 12) return { type: "Depósito a Plazo Fijo (DPF)", desc: "Recomendamos Cajas Municipales (ej. Huancayo, Arequipa) con TEA > 7.0%. FSD activo.", color: "border-emerald-500/40 text-emerald-300" };
-  else if (monthsRequired >= 6) return { type: "Cuenta Alto Rendimiento", desc: "Usa Ágora PAY o BCP Warda. Flexibilidad mensual con TEA ~5.5%.", color: "border-indigo-500/40 text-indigo-300" };
-  else return { type: "Ahorro Líquido", desc: "Corto plazo. Prioriza liquidez en cuentas sin mantenimiento.", color: "border-amber-500/40 text-amber-300" };
+  if (monthsRequired >= 12) return { type: "Depósito a Plazo Fijo (DPF)", desc: "Recomendamos Cajas Municipales (ej. Huancayo, Arequipa) con TEA > 7.0%. Cuentas resguardadas por el Fondo de Seguro de Depósitos.", color: "border-emerald-500/40 text-emerald-300" };
+  else if (monthsRequired >= 6) return { type: "Cuenta Alto Rendimiento", desc: "Usa Ágora PAY, BCP Warda o similar. Tienen flexibilidad para aportes mensuales con TEA ~5.5%.", color: "border-indigo-500/40 text-indigo-300" };
+  else return { type: "Ahorro Líquido", desc: "Plazo corto de ejecución. Prioriza liquidez pura en cuentas sin mantenimiento mensual.", color: "border-amber-500/40 text-amber-300" };
 }
 
 function updateFinancialAdvice(surplus) {
   if (surplus <= 0) {
-    dom.adviceText.innerHTML = "Actualmente <strong>no cuentas con flujo de caja libre</strong>. Revisa tus gastos y evita deudas.";
+    dom.adviceText.innerHTML = "Alerta: Actualmente <strong>no cuentas con flujo de caja libre</strong>. Audita tus gastos fijos y suscripciones para identificar fugas de capital.";
   } else if (surplus < 500) {
-    dom.adviceText.innerHTML = `Dispones de <strong>S/ ${surplus.toFixed(2)}</strong> libres. Inicia tu Fondo de Emergencia en una cuenta de alto rendimiento (Ej. Ágora PAY ~5% TREA).`;
+    dom.adviceText.innerHTML = `Detectamos <strong>S/ ${surplus.toFixed(2)}</strong> libres. Úsalos para iniciar tu Fondo de Emergencia en una cuenta de alto rendimiento (Ej. Ágora PAY ~5% TREA).`;
   } else {
-    dom.adviceText.innerHTML = `¡Excelente! Tienes <strong>S/ ${surplus.toFixed(2)}</strong> libres. Estrategia: 30% a fondo de emergencia y 70% a tus <strong>Metas de Ahorro</strong> o DPF en Caja Municipal.`;
+    dom.adviceText.innerHTML = `¡Excelente! Tienes <strong>S/ ${surplus.toFixed(2)}</strong> libres. Estrategia: 30% a fondo de emergencia líquido y 70% inyéctalos en tus <strong>Metas de Ahorro (Bóveda)</strong>.`;
   }
 }
 
@@ -312,30 +354,34 @@ function renderAll() {
   const profile = db.profiles[activeUser];
   const monthData = profile.months[currentMonth];
   
+  // Evitar que el cursor salte si el usuario está tipeando el sueldo
   if (document.activeElement !== dom.grossInput) dom.grossInput.value = monthData.gross > 0 ? monthData.gross : '';
   dom.pensionType.value = monthData.pension;
   dom.healthType.value = monthData.health;
   
+  // Cálculo CTS y Beneficios
   const pensionRate = monthData.pension === "AFP" ? 0.125 : 0.13;
   const healthRate = monthData.health === "ESSALUD" ? 0.09 : 0.0675;
   
   let deductions = monthData.gross * pensionRate;
-  if (monthData.gross * 14 > 7 * UIT) deductions += ((monthData.gross * 14 - 7 * UIT) * 0.08) / 12;
+  if (monthData.gross * 14 > 7 * UIT) deductions += ((monthData.gross * 14 - 7 * UIT) * 0.08) / 12; // Proyección Renta 5ta simple
   const net = monthData.gross - deductions;
   
   const grati = monthData.gross + (monthData.gross * healthRate);
   const cts = (monthData.gross + (grati / 6)) / 2;
 
+  // Inyectar cálculos
   dom.labels.deductions.innerText = `-S/ ${deductions.toFixed(2)}`;
   dom.labels.net.innerText = `S/ ${net.toFixed(2)}`;
   dom.labels.cts.innerText = `S/ ${cts.toFixed(2)}`;
   dom.labels.grati.innerText = `S/ ${grati.toFixed(2)}`;
 
+  // Disparar flash animado de actualización
   document.querySelectorAll('.value-update').forEach(el => { el.classList.remove('update-flash'); void el.offsetWidth; el.classList.add('update-flash'); });
 
+  // Tabla Transaccional
   let totalExp = 0, paidExp = 0;
   dom.expList.innerHTML = '';
-  
   const sortedExpenses = [...monthData.expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   sortedExpenses.forEach(exp => {
@@ -356,6 +402,7 @@ function renderAll() {
       </div>`;
   });
 
+  // KPIs Financieros
   const surplus = Math.max(0, net - totalExp);
   const healthRatio = net > 0 ? (totalExp / net) * 100 : 0;
   
@@ -367,6 +414,7 @@ function renderAll() {
 
   updateFinancialAdvice(surplus);
 
+  // Motor Render Metas (Animación)
   dom.goalsContainer.innerHTML = '';
   profile.goals.forEach(goal => {
     const monthsRequired = Math.ceil(Math.max(0, goal.target - goal.current) / goal.monthly);
@@ -398,10 +446,10 @@ function renderAll() {
 
         ${!isComplete ? `
           <div class="flex items-center justify-between mb-3 bg-slate-900 p-2 rounded-lg border border-slate-800 no-print">
-            <span class="text-[10px] text-slate-400">Ingresar abono:</span>
+            <span class="text-[10px] text-slate-400">Abonar a meta:</span>
             <div class="flex space-x-2">
-              <input type="number" id="fund_${goal.id}" placeholder="S/" class="w-20 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:border-emerald-500 focus:outline-none">
-              <button onclick="addFundsToGoal('${goal.id}')" class="action-btn bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded text-xs transition shadow">Aportar</button>
+              <input type="number" id="fund_${goal.id}" placeholder="Monto" class="w-20 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white font-bold focus:border-emerald-500 focus:outline-none">
+              <button onclick="addFundsToGoal('${goal.id}')" class="action-btn bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded text-xs transition shadow">Inyectar</button>
             </div>
           </div>
           <div class="bg-slate-900/50 p-3 rounded-lg border ${insight.color} text-xs">
@@ -409,7 +457,7 @@ function renderAll() {
           </div>
         ` : `
           <div class="bg-emerald-900/20 p-3 rounded-lg border border-emerald-500/30 text-xs text-emerald-300 text-center">
-            ¡Felicidades! Has alcanzado el 100% de esta meta de ahorro.
+            ¡Felicidades! Has completado el 100% del capital requerido.
           </div>
         `}
       </div>`;
