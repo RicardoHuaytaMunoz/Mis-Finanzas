@@ -23,21 +23,48 @@
         <p class="text-sm text-slate-400 mt-1">Control de Perfiles & Metas</p>
       </div>
 
+      <div class="mb-4">
+        <div class="flex border-b border-slate-700">
+          <button id="tabLogin" class="flex-1 py-2 text-sm font-semibold text-emerald-400 border-b-2 border-emerald-500 focus:outline-none">Iniciar Sesión</button>
+          <button id="tabRegister" class="flex-1 py-2 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:text-slate-300 focus:outline-none transition">Nuevo Perfil</button>
+        </div>
+      </div>
+
+      <!-- Formulario de Login Existente -->
       <form id="loginForm" class="space-y-5">
         <div>
           <label class="text-xs font-semibold text-slate-400 block mb-1">Seleccionar Perfil</label>
           <select id="authProfile" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 focus:border-emerald-500 focus:outline-none"></select>
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-400 block mb-1">Credenciales</label>
+          <label class="text-xs font-semibold text-slate-400 block mb-1">Contraseña</label>
           <div class="relative">
             <i class="fa-solid fa-lock absolute left-3 top-3.5 text-slate-500"></i>
             <input type="password" id="authPassword" required placeholder="Ingresa tu contraseña" class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white focus:border-emerald-500 focus:outline-none">
           </div>
-          <p id="authMessage" class="text-[10px] text-amber-400 mt-2 hidden"><i class="fa-solid fa-circle-info mr-1"></i>Primer ingreso: Se registrará esta contraseña localmente.</p>
           <p id="authError" class="text-[10px] text-rose-400 mt-2 hidden"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Contraseña incorrecta.</p>
         </div>
         <button type="submit" id="authBtn" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-emerald-900/20">Validar Acceso</button>
+      </form>
+
+      <!-- Formulario de Registro Nuevo -->
+      <form id="registerForm" class="space-y-5 hidden">
+        <div>
+          <label class="text-xs font-semibold text-slate-400 block mb-1">Nombre del Nuevo Perfil</label>
+          <div class="relative">
+            <i class="fa-solid fa-user absolute left-3 top-3.5 text-slate-500"></i>
+            <input type="text" id="regProfileName" required placeholder="Ej. Mi Hermano, Yo" class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white focus:border-indigo-500 focus:outline-none">
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-semibold text-slate-400 block mb-1">Crear Contraseña</label>
+          <div class="relative">
+            <i class="fa-solid fa-key absolute left-3 top-3.5 text-slate-500"></i>
+            <input type="password" id="regPassword" required placeholder="Crea una contraseña segura" class="w-full bg-slate-950 border border-slate-700 rounded-lg pl-10 pr-4 py-3 text-white focus:border-indigo-500 focus:outline-none">
+          </div>
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition shadow-lg shadow-indigo-900/20">Crear Perfil & Entrar</button>
+        <p class="text-[10px] text-amber-400 mt-2 text-center"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Los datos se guardan únicamente en este dispositivo.</p>
       </form>
     </div>
   </div>
@@ -69,7 +96,6 @@
       </div>
     </nav>
 
-    <!-- ÁREA DE CAPTURA DE IMAGEN -->
     <main id="exportableArea" class="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6 bg-slate-950">
       
       <!-- Columna Izquierda -->
@@ -103,7 +129,6 @@
                 <span class="text-xs font-bold text-slate-200">Neto Liquidez:</span>
                 <span id="lblNet" class="text-lg font-black text-emerald-400">S/ 0.00</span>
               </div>
-              <!-- Beneficios Sociales -->
               <div class="grid grid-cols-2 gap-2 pt-1">
                 <div class="text-center">
                   <span class="block text-[10px] text-indigo-300">CTS (Semestral)</span>
@@ -137,10 +162,9 @@
         </div>
       </div>
 
-      <!-- Columna Derecha (Asesor, KPIs y Gráficos) -->
+      <!-- Columna Derecha -->
       <div class="lg:col-span-8 space-y-6">
         
-        <!-- Asistente Financiero -->
         <div class="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-4 shadow-lg value-update">
           <h2 class="text-sm font-bold text-indigo-300 mb-2 flex items-center">
             <i class="fa-solid fa-lightbulb text-amber-400 mr-2"></i> Asistente Estratégico de Ahorro
@@ -179,14 +203,14 @@
         </div>
       </div>
 
-      <!-- MÓDULO ALCANCÍA DE OBJETIVOS -->
+      <!-- ALCANCÍA DE OBJETIVOS -->
       <div class="lg:col-span-12 bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-lg mt-4">
         <div class="flex justify-between items-end mb-6 border-b border-slate-800 pb-3">
           <div>
             <h2 class="text-lg font-bold text-slate-100 flex items-center">
               <i class="fa-solid fa-piggy-bank text-rose-400 mr-2 text-2xl"></i> Alcancía de Objetivos (Metas Múltiples)
             </h2>
-            <p class="text-xs text-slate-400 mt-1">Añade fondos mes a mes para completar tus metas. ¡Puedes crear todas las que quieras!</p>
+            <p class="text-xs text-slate-400 mt-1">Las metas persisten a lo largo de los meses. Selecciona una meta para aportar este mes.</p>
           </div>
         </div>
 
@@ -195,7 +219,7 @@
             <h3 class="text-sm font-bold text-slate-200 mb-4">Nueva Meta</h3>
             <form id="goalForm" class="space-y-4">
               <div>
-                <label class="text-xs text-slate-400 block mb-1">Nombre de la Meta (Ej. Viaje, Auto)</label>
+                <label class="text-xs text-slate-400 block mb-1">Nombre de la Meta</label>
                 <input type="text" id="goalName" required class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-rose-400 focus:outline-none">
               </div>
               <div class="grid grid-cols-2 gap-3">
@@ -213,7 +237,6 @@
           </div>
           
           <div class="lg:col-span-2 space-y-4 max-h-[350px] overflow-y-auto custom-scrollbar pr-2" id="goalsContainer">
-            <!-- Renderizado JS -->
           </div>
         </div>
       </div>
