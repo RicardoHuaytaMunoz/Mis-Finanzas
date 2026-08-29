@@ -3,29 +3,26 @@ let chartInstance = null;
 let currentMonth = new Date().toISOString().slice(0, 7); 
 let activeUser = null; 
 
-// Obtener fecha actual estrictamente en zona horaria Perú
 function getPeruDate() {
   return new Intl.DateTimeFormat('en-CA', { 
     timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' 
   }).format(new Date());
 }
 
-// Inicialización de Base de Datos y Migración
-const defaultProfiles = ["Ricardo", "Ivechi"];
 let db = JSON.parse(localStorage.getItem('finops_db_secure'));
 
 if (!db) {
-  db = { profiles: {} };
-  defaultProfiles.forEach(p => {
-    db.profiles[p] = { passwordHash: null, months: {}, goals: [] };
-  });
+  db = { 
+    profiles: {
+      "Ricardo": { passwordHash: null, months: {}, goals: [] },
+      "Ivechi": { passwordHash: null, months: {}, goals: [] }
+    } 
+  };
   localStorage.setItem('finops_db_secure', JSON.stringify(db));
-} else {
-  if (db.profiles["Pareja"]) {
+} else if (db.profiles["Pareja"]) {
     db.profiles["Ivechi"] = db.profiles["Pareja"];
     delete db.profiles["Pareja"];
     localStorage.setItem('finops_db_secure', JSON.stringify(db));
-  }
 }
 
 const dom = {
@@ -36,6 +33,13 @@ const dom = {
   authMessage: document.getElementById('authMessage'),
   authError: document.getElementById('authError'),
   authForm: document.getElementById('loginForm'),
+  
+  tabLogin: document.getElementById('tabLogin'),
+  tabRegister: document.getElementById('tabRegister'),
+  registerForm: document.getElementById('registerForm'),
+  regProfileName: document.getElementById('regProfileName'),
+  regPassword: document.getElementById('regPassword'),
+
   navProfileName: document.getElementById('navProfileName'),
   monthSelector: document.getElementById('monthSelector'),
   grossInput: document.getElementById('grossInput'),
@@ -59,18 +63,48 @@ async function hashPassword(password) {
 }
 
 function initAuth() {
-  dom.authProfile.innerHTML = '';
-  Object.keys(db.profiles).forEach(p => { dom.authProfile.innerHTML += `<option value="${p}">${p}</option>`; });
+  loadProfiles();
   checkProfileStatus();
   dom.authProfile.addEventListener('change', checkProfileStatus);
   dom.authForm.addEventListener('submit', handleLogin);
+  
+  dom.tabLogin.addEventListener('click', () => switchTab('login'));
+  dom.tabRegister.addEventListener('click', () => switchTab('register'));
+  dom.registerForm.addEventListener('submit', handleRegister);
+}
+
+function loadProfiles() {
+    dom.authProfile.innerHTML = '';
+    Object.keys(db.profiles).forEach(p => { 
+        dom.authProfile.innerHTML += `<option value="${p}">${p}</option>`; 
+    });
+}
+
+function switchTab(tab) {
+    if(tab === 'login') {
+        dom.authForm.classList.remove('hidden');
+        dom.registerForm.classList.add('hidden');
+        dom.tabLogin.classList.replace('text-slate-500', 'text-emerald-400');
+        dom.tabLogin.classList.replace('border-transparent', 'border-emerald-500');
+        dom.tabRegister.classList.replace('text-emerald-400', 'text-slate-500');
+        dom.tabRegister.classList.replace('border-emerald-500', 'border-transparent');
+    } else {
+        dom.authForm.classList.add('hidden');
+        dom.registerForm.classList.remove('hidden');
+        dom.tabRegister.classList.replace('text-slate-500', 'text-emerald-400');
+        dom.tabRegister.classList.replace('border-transparent', 'border-emerald-500');
+        dom.tabLogin.classList.replace('text-emerald-400', 'text-slate-500');
+        dom.tabLogin.classList.replace('border-emerald-500', 'border-transparent');
+    }
 }
 
 function checkProfileStatus() {
+  if(Object.keys(db.profiles).length === 0) return;
   const selected = dom.authProfile.value;
   dom.authError.classList.add('hidden');
   dom.authPassword.value = '';
-  if (db.profiles[selected].passwordHash === null) {
+  
+  if (db.profiles[selected] && db.profiles[selected].passwordHash === null) {
     dom.authMessage.classList.remove('hidden');
     document.getElementById('authBtn').innerText = 'Registrar Contraseña & Entrar';
   } else {
@@ -79,9 +113,34 @@ function checkProfileStatus() {
   }
 }
 
+async function handleRegister(e) {
+    e.preventDefault();
+    const name = dom.regProfileName.value.trim();
+    const pwd = dom.regPassword.value;
+    
+    if(db.profiles[name]) {
+        alert("Ese nombre de perfil ya existe en este dispositivo.");
+        return;
+    }
+    
+    const hashed = await hashPassword(pwd);
+    db.profiles[name] = { passwordHash: hashed, months: {}, goals: [] };
+    localStorage.setItem('finops_db_secure', JSON.stringify(db));
+    
+    dom.regProfileName.value = '';
+    dom.regPassword.value = '';
+    loadProfiles();
+    switchTab('login');
+    dom.authProfile.value = name;
+    checkProfileStatus();
+    alert(`Perfil '${name}' creado exitosamente. Ya puedes iniciar sesión.`);
+}
+
 async function handleLogin(e) {
   e.preventDefault();
   const selected = dom.authProfile.value;
+  if(!selected) return;
+  
   const hashed = await hashPassword(dom.authPassword.value);
   const profile = db.profiles[selected];
 
@@ -133,7 +192,6 @@ window.exportDashboard = function() {
     link.download = `Reporte_${activeUser}_${currentMonth}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
-    
     noPrintElements.forEach(el => el.style.display = '');
   }).catch(err => {
     noPrintElements.forEach(el => el.style.display = '');
@@ -234,18 +292,18 @@ window.deleteGoal = function(id) {
 }
 
 function getRecommendationInsight(monthsRequired) {
-  if (monthsRequired >= 12) return { type: "Depósito a Plazo Fijo (DPF)", desc: "Recomendamos Cajas Municipales (ej. Huancayo, Arequipa) con TEA > 7.0%. Fondo de Seguro de Depósitos activo.", color: "border-emerald-500/40 text-emerald-300" };
-  else if (monthsRequired >= 6) return { type: "Cuenta Alto Rendimiento", desc: "Usa Ágora PAY, BCP Warda o Ripley. Flexibilidad para aportes mensuales con TEA ~5.5%.", color: "border-indigo-500/40 text-indigo-300" };
-  else return { type: "Ahorro Líquido", desc: "Corto plazo. Evita cuentas con costo de mantenimiento. Prioriza liquidez inmediata.", color: "border-amber-500/40 text-amber-300" };
+  if (monthsRequired >= 12) return { type: "Depósito a Plazo Fijo (DPF)", desc: "Recomendamos Cajas Municipales (ej. Huancayo, Arequipa) con TEA > 7.0%. FSD activo.", color: "border-emerald-500/40 text-emerald-300" };
+  else if (monthsRequired >= 6) return { type: "Cuenta Alto Rendimiento", desc: "Usa Ágora PAY o BCP Warda. Flexibilidad mensual con TEA ~5.5%.", color: "border-indigo-500/40 text-indigo-300" };
+  else return { type: "Ahorro Líquido", desc: "Corto plazo. Prioriza liquidez en cuentas sin mantenimiento.", color: "border-amber-500/40 text-amber-300" };
 }
 
 function updateFinancialAdvice(surplus) {
   if (surplus <= 0) {
-    dom.adviceText.innerHTML = "Actualmente <strong>no cuentas con flujo de caja libre</strong> este mes. Revisa tus gastos fijos y suscripciones para identificar fugas de dinero. Evita contraer deudas innecesarias.";
+    dom.adviceText.innerHTML = "Actualmente <strong>no cuentas con flujo de caja libre</strong>. Revisa tus gastos y evita deudas.";
   } else if (surplus < 500) {
-    dom.adviceText.innerHTML = `Dispones de <strong>S/ ${surplus.toFixed(2)}</strong> libres. Es un buen inicio para construir tu Fondo de Emergencia. Sugerencia: Mueve este monto a una cuenta de alto rendimiento (Ej. BCP Warda o Ágora PAY al ~5% TREA) que te permita liquidez inmediata.`;
+    dom.adviceText.innerHTML = `Dispones de <strong>S/ ${surplus.toFixed(2)}</strong> libres. Inicia tu Fondo de Emergencia en una cuenta de alto rendimiento (Ej. Ágora PAY ~5% TREA).`;
   } else {
-    dom.adviceText.innerHTML = `¡Excelente! Tienes <strong>S/ ${surplus.toFixed(2)}</strong> de excedente. Estrategia sugerida: Destina un 30% a tu fondo de emergencia líquido y el 70% repártelo entre tus <strong>Metas de Ahorro (Alcancía)</strong> o un Depósito a Plazo Fijo (DPF) en una Caja Municipal (TEA > 7%) para combatir la inflación.`;
+    dom.adviceText.innerHTML = `¡Excelente! Tienes <strong>S/ ${surplus.toFixed(2)}</strong> libres. Estrategia: 30% a fondo de emergencia y 70% a tus <strong>Metas de Ahorro</strong> o DPF en Caja Municipal.`;
   }
 }
 
@@ -258,7 +316,6 @@ function renderAll() {
   dom.pensionType.value = monthData.pension;
   dom.healthType.value = monthData.health;
   
-  // Cálculos de Retenciones y Beneficios
   const pensionRate = monthData.pension === "AFP" ? 0.125 : 0.13;
   const healthRate = monthData.health === "ESSALUD" ? 0.09 : 0.0675;
   
@@ -308,13 +365,11 @@ function renderAll() {
   dom.kpis.health.innerText = `${healthRatio.toFixed(1)}%`;
   dom.kpis.health.className = `text-xl font-bold mt-1 ${healthRatio > 50 ? 'text-rose-400' : 'text-emerald-400'}`;
 
-  // Actualizar Asesor Financiero
   updateFinancialAdvice(surplus);
 
-  // Metas Render (Alcancía)
   dom.goalsContainer.innerHTML = '';
   profile.goals.forEach(goal => {
-    const monthsRequired = Math.ceil((goal.target - goal.current) / goal.monthly);
+    const monthsRequired = Math.ceil(Math.max(0, goal.target - goal.current) / goal.monthly);
     const insight = getRecommendationInsight(monthsRequired);
     const progress = Math.min((goal.current / goal.target) * 100, 100);
     const isComplete = progress >= 100;
@@ -343,7 +398,7 @@ function renderAll() {
 
         ${!isComplete ? `
           <div class="flex items-center justify-between mb-3 bg-slate-900 p-2 rounded-lg border border-slate-800 no-print">
-            <span class="text-[10px] text-slate-400">Ingresar abono a esta meta:</span>
+            <span class="text-[10px] text-slate-400">Ingresar abono:</span>
             <div class="flex space-x-2">
               <input type="number" id="fund_${goal.id}" placeholder="S/" class="w-20 bg-slate-950 border border-slate-700 rounded px-2 py-1 text-xs text-white focus:border-emerald-500 focus:outline-none">
               <button onclick="addFundsToGoal('${goal.id}')" class="action-btn bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded text-xs transition shadow">Aportar</button>
