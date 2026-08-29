@@ -1,21 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; }
 
-/* Scrollbar adaptativa */
 .custom-scrollbar::-webkit-scrollbar { width: 5px; }
 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #475569; }
 
-/* Actualización DOM Reactivo (Flash suave) */
 @keyframes flash { 0% { background-color: rgba(99, 102, 241, 0.15); } 100% { background-color: transparent; } }
 .update-flash { animation: flash 0.4s ease-out; }
 
-/* Transición de Vistas */
 .fade-in { animation: fadeIn 0.4s ease-in; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Fix Calendario en Navegadores oscuros */
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
   cursor: pointer;
@@ -25,7 +21,6 @@ input[type="date"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
 
-/* Animación de Éxito en Metas (Alcancía) */
 @keyframes glowSuccess {
   0% { box-shadow: 0 0 5px rgba(16, 185, 129, 0.2); }
   50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
