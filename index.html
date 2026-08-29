@@ -36,50 +36,71 @@
       
       <!-- Módulo Planilla -->
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 shadow-lg">
-        <h2 class="text-sm font-bold text-slate-100 mb-4 border-b border-slate-800 pb-2">
-          <i class="fa-solid fa-money-check-dollar text-indigo-400 mr-2"></i>Estructura de Ingresos
+        <h2 class="text-sm font-bold text-slate-100 mb-4 border-b border-slate-800 pb-2 flex justify-between items-center">
+          <span><i class="fa-solid fa-money-check-dollar text-indigo-400 mr-2"></i>Estructura de Ingresos</span>
         </h2>
-        <div class="space-y-4">
+        
+        <form id="incomeForm" class="space-y-4" onsubmit="event.preventDefault();">
           <div>
             <label class="text-xs text-slate-400 block mb-1">Sueldo Bruto Mensual (S/)</label>
-            <input type="number" id="grossInput" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-emerald-500 focus:outline-none" placeholder="Ej. 6500">
+            <div class="flex space-x-2">
+              <input type="number" id="grossInput" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-emerald-500 focus:outline-none transition-colors" placeholder="Ej. 6500">
+            </div>
           </div>
+          
           <div class="grid grid-cols-2 gap-2 text-xs">
             <div>
-              <label class="text-slate-400 block mb-1">Pensión</label>
+              <label class="text-slate-400 block mb-1">Pensión (Retención)</label>
               <select id="pensionType" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-200">
-                <option value="AFP">AFP</option>
-                <option value="ONP">ONP</option>
+                <option value="AFP">AFP (~12.5%)</option>
+                <option value="ONP">ONP (13.0%)</option>
               </select>
             </div>
             <div>
-              <label class="text-slate-400 block mb-1">Salud</label>
+              <label class="text-slate-400 block mb-1">Salud (Aporte Empleador)</label>
               <select id="healthType" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1.5 text-slate-200">
-                <option value="ESSALUD">EsSalud</option>
-                <option value="EPS">EPS</option>
+                <option value="ESSALUD">EsSalud (9.0%)</option>
+                <option value="EPS">EPS (6.75%)</option>
               </select>
             </div>
           </div>
-          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800">
+
+          <!-- Transparencia de Descuentos -->
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 mt-2 value-update">
+            <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 border-b border-slate-800 pb-1">Retenciones al Trabajador</h3>
             <div class="flex justify-between text-xs text-slate-300 mb-1">
-              <span>Descuentos Ley:</span> <span id="lblDeductions" class="text-rose-400">S/ 0.00</span>
+              <span id="lblPensionName">AFP (~12.5%)</span> 
+              <span id="lblPensionAmount" class="text-rose-400 font-medium">-S/ 0.00</span>
             </div>
-            <div class="flex justify-between items-center mt-2 pt-2 border-t border-slate-800">
-              <span class="text-xs font-bold text-slate-200">Neto Disponible:</span>
+            <div class="flex justify-between text-xs text-slate-300 mb-2">
+              <span>Renta 5ta Cat. (Estimada)</span> 
+              <span id="lblTaxAmount" class="text-rose-400 font-medium">-S/ 0.00</span>
+            </div>
+            <div class="flex justify-between items-center pt-2 border-t border-slate-800">
+              <span class="text-xs font-bold text-slate-200">Neto Disponible (Liquidez):</span>
               <span id="lblNet" class="text-lg font-black text-emerald-400">S/ 0.00</span>
             </div>
           </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div class="bg-indigo-950/30 p-2 rounded border border-indigo-500/20 text-center">
-              <span class="block text-[10px] text-indigo-300">CTS Proyectada</span>
-              <span id="lblCts" class="text-xs font-bold text-indigo-400">S/ 0.00</span>
+
+          <!-- Transparencia Beneficios -->
+          <div class="bg-slate-950 p-3 rounded-lg border border-slate-800 mt-2 value-update">
+            <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2 border-b border-slate-800 pb-1">Aportes Patronales & Provisiones</h3>
+            <div class="flex justify-between text-xs text-slate-300 mb-2">
+              <span id="lblHealthName">EsSalud (9.0%)</span> 
+              <span id="lblHealthAmount" class="text-blue-400 font-medium">+S/ 0.00 (No descuenta)</span>
             </div>
-            <div class="bg-indigo-950/30 p-2 rounded border border-indigo-500/20 text-center">
-              <span class="block text-[10px] text-indigo-300">Grati Proyectada</span>
-              <span id="lblGrati" class="text-xs font-bold text-indigo-400">S/ 0.00</span>
+            <div class="grid grid-cols-2 gap-2 pt-2 border-t border-slate-800">
+              <div class="text-center">
+                <span class="block text-[10px] text-indigo-300">CTS Semestral</span>
+                <span id="lblCts" class="text-xs font-bold text-indigo-400">S/ 0.00</span>
+              </div>
+              <div class="text-center border-l border-slate-800">
+                <span class="block text-[10px] text-indigo-300">Grati (Jul/Dic)</span>
+                <span id="lblGrati" class="text-xs font-bold text-indigo-400">S/ 0.00</span>
+              </div>
             </div>
           </div>
-        </div>
+        </form>
       </div>
 
       <!-- Módulo Agregar Gasto -->
@@ -102,7 +123,7 @@
             </select>
           </div>
           <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2 rounded-lg text-sm transition">
-            Añadir a la lista
+            Añadir Gasto
           </button>
         </form>
       </div>
@@ -114,19 +135,19 @@
       
       <!-- KPIs Analíticos -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow">
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow value-update">
           <span class="text-xs text-slate-400">Total Fijos</span>
           <div id="kpiTotalExp" class="text-xl font-bold text-white mt-1">S/ 0.00</div>
         </div>
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow">
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow value-update">
           <span class="text-xs text-slate-400">Total Pagado</span>
           <div id="kpiPaid" class="text-xl font-bold text-emerald-400 mt-1">S/ 0.00</div>
         </div>
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow">
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow value-update">
           <span class="text-xs text-slate-400">Excedente Neto</span>
           <div id="kpiSurplus" class="text-xl font-bold text-indigo-400 mt-1">S/ 0.00</div>
         </div>
-        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow">
+        <div class="bg-slate-900 p-4 rounded-xl border border-slate-800 shadow value-update">
           <span class="text-xs text-slate-400">Salud Financiera</span>
           <div id="kpiHealth" class="text-xl font-bold text-amber-400 mt-1">0%</div>
           <span class="text-[9px] text-slate-500">Ratio Gasto/Neto</span>
