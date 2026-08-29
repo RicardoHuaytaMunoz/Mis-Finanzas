@@ -3,7 +3,15 @@ let chartInstance = null;
 let currentMonth = new Date().toISOString().slice(0, 7); 
 let activeUser = null; 
 
-const defaultProfiles = ["Ricardo", "Pareja"];
+// Obtener fecha actual estrictamente en zona horaria Perú
+function getPeruDate() {
+  return new Intl.DateTimeFormat('en-CA', { 
+    timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit' 
+  }).format(new Date());
+}
+
+// Inicialización de Base de Datos y Migración
+const defaultProfiles = ["Ricardo", "Ivechi"];
 let db = JSON.parse(localStorage.getItem('finops_db_secure'));
 
 if (!db) {
@@ -12,6 +20,13 @@ if (!db) {
     db.profiles[p] = { passwordHash: null, months: {}, goals: [] };
   });
   localStorage.setItem('finops_db_secure', JSON.stringify(db));
+} else {
+  // Migración automática del nombre
+  if (db.profiles["Pareja"]) {
+    db.profiles["Ivechi"] = db.profiles["Pareja"];
+    delete db.profiles["Pareja"];
+    localStorage.setItem('finops_db_secure', JSON.stringify(db));
+  }
 }
 
 const dom = {
@@ -28,11 +43,15 @@ const dom = {
   pensionType: document.getElementById('pensionType'),
   healthType: document.getElementById('healthType'),
   expForm: document.getElementById('expenseForm'),
+  expDate: document.getElementById('expDate'),
   expList: document.getElementById('expenseList'),
+  goalForm: document.getElementById('goalForm'),
+  goalsContainer: document.getElementById('goalsContainer'),
   labels: { deductions: document.getElementById('lblDeductions'), net: document.getElementById('lblNet') },
   kpis: { total: document.getElementById('kpiTotalExp'), paid: document.getElementById('kpiPaid'), surplus: document.getElementById('kpiSurplus'), health: document.getElementById('kpiHealth') }
 };
 
+// Criptografía Auth
 async function hashPassword(password) {
   const msgBuffer = new TextEncoder().encode(password);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -84,8 +103,8 @@ function loginSuccess(username) {
   dom.appScreen.classList.remove('hidden');
   dom.monthSelector.value = currentMonth;
   
-  // Asignar fecha por defecto
-  document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
+  // Establecer fecha por defecto (Perú)
+  dom.expDate.value = getPeruDate();
   
   ensureDataContext();
   attachDashboardListeners();
@@ -100,20 +119,30 @@ window.logout = function() {
   checkProfileStatus();
 };
 
+// Exportación del Dashboard
 window.exportDashboard = function() {
   const node = document.getElementById('exportableArea');
-  // Ocultar temporalmente los botones de eliminar para la captura
-  const deleteBtns = document.querySelectorAll('.delete-btn');
-  deleteBtns.forEach(btn => btn.style.display = 'none');
+  const noPrintElements = document.querySelectorAll('.no-print, .delete-btn');
+  
+  // Ocultar elementos irrelevantes antes de la captura
+  noPrintElements.forEach(el => el.style.display = 'none');
 
-  html2canvas(node, { backgroundColor: '#020617', scale: 2 }).then(canvas => {
+  html2canvas(node, { 
+    backgroundColor: '#020617', 
+    scale: 2,
+    useCORS: true,
+    logging: false
+  }).then(canvas => {
     const link = document.createElement('a');
     link.download = `Reporte_${activeUser}_${currentMonth}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
     
-    // Restaurar botones
-    deleteBtns.forEach(btn => btn.style.display = 'block');
+    // Restaurar visibilidad
+    noPrintElements.forEach(el => el.style.display = '');
+  }).catch(err => {
+    console.error("Error en captura:", err);
+    noPrintElements.forEach(el => el.style.display = '');
   });
 };
 
@@ -125,6 +154,7 @@ function attachDashboardListeners() {
   dom.pensionType.addEventListener('change', updateIncomeData);
   dom.healthType.addEventListener('change', updateIncomeData);
   dom.expForm.addEventListener('submit', addExpense);
+  dom.goalForm.addEventListener('submit', addGoal);
   listenersAttached = true;
 }
 
@@ -135,6 +165,7 @@ function ensureDataContext() {
   }
 }
 
+// Operaciones Lógicas
 function updateIncomeData() {
   const monthData = db.profiles[activeUser].months[currentMonth];
   monthData.gross = parseFloat(dom.grossInput.value) || 0;
@@ -149,7 +180,7 @@ function addExpense(e) {
   const name = document.getElementById('expName').value.trim();
   const amount = parseFloat(document.getElementById('expAmount').value);
   const category = document.getElementById('expCategory').value;
-  const date = document.getElementById('expDate').value;
+  const date = dom.expDate.value;
 
   if (name && amount > 0 && date) {
     db.profiles[activeUser].months[currentMonth].expenses.push({ 
@@ -158,6 +189,21 @@ function addExpense(e) {
     localStorage.setItem('finops_db_secure', JSON.stringify(db));
     document.getElementById('expName').value = '';
     document.getElementById('expAmount').value = '';
+    dom.expDate.value = getPeruDate(); // Reset a fecha de hoy post-inserción
+    renderAll();
+  }
+}
+
+function addGoal(e) {
+  e.preventDefault();
+  const name = document.getElementById('goalName').value.trim();
+  const target = parseFloat(document.getElementById('goalTarget').value);
+  const monthly = parseFloat(document.getElementById('goalMonthly').value);
+
+  if (name && target > 0 && monthly > 0) {
+    db.profiles[activeUser].goals.push({ id: Date.now().toString(), name, target, monthly, current: 0 });
+    localStorage.setItem('finops_db_secure', JSON.stringify(db));
+    dom.goalForm.reset();
     renderAll();
   }
 }
@@ -173,9 +219,24 @@ window.deleteExpense = function(id) {
   renderAll();
 };
 
+window.deleteGoal = function(id) {
+  db.profiles[activeUser].goals = db.profiles[activeUser].goals.filter(x => x.id !== id);
+  localStorage.setItem('finops_db_secure', JSON.stringify(db));
+  renderAll();
+}
+
+// Motor de Recomendaciones (Metas)
+function getRecommendationInsight(monthsRequired) {
+  if (monthsRequired >= 12) return { type: "Depósito a Plazo Fijo (DPF)", desc: "Recomendamos Cajas Municipales (ej. Huancayo, Arequipa) con TEA > 7.0%. Fondo de Seguro de Depósitos activo.", color: "border-emerald-500/40 text-emerald-300" };
+  else if (monthsRequired >= 6) return { type: "Cuenta Alto Rendimiento", desc: "Usa Ágora PAY, BCP Warda o Ripley. Flexibilidad para aportes mensuales con TEA ~5.5%.", color: "border-indigo-500/40 text-indigo-300" };
+  else return { type: "Ahorro Líquido", desc: "Corto plazo. Evita cuentas con costo de mantenimiento. Prioriza liquidez inmediata.", color: "border-amber-500/40 text-amber-300" };
+}
+
+// Motor de Renderizado
 function renderAll() {
   if (!activeUser) return;
-  const monthData = db.profiles[activeUser].months[currentMonth];
+  const profile = db.profiles[activeUser];
+  const monthData = profile.months[currentMonth];
   
   if (document.activeElement !== dom.grossInput) dom.grossInput.value = monthData.gross > 0 ? monthData.gross : '';
   dom.pensionType.value = monthData.pension;
@@ -193,7 +254,6 @@ function renderAll() {
   let totalExp = 0, paidExp = 0;
   dom.expList.innerHTML = '';
   
-  // Ordenamiento cronológico de gastos
   const sortedExpenses = [...monthData.expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
 
   sortedExpenses.forEach(exp => {
@@ -222,6 +282,24 @@ function renderAll() {
   dom.kpis.surplus.innerText = `S/ ${surplus.toFixed(2)}`;
   dom.kpis.health.innerText = `${healthRatio.toFixed(1)}%`;
   dom.kpis.health.className = `text-xl font-bold mt-1 ${healthRatio > 50 ? 'text-rose-400' : 'text-emerald-400'}`;
+
+  // Metas Render
+  dom.goalsContainer.innerHTML = '';
+  profile.goals.forEach(goal => {
+    const monthsRequired = Math.ceil((goal.target - goal.current) / goal.monthly);
+    const insight = getRecommendationInsight(monthsRequired);
+    const progress = Math.min((goal.current / goal.target) * 100, 100);
+    dom.goalsContainer.innerHTML += `
+      <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 relative overflow-hidden">
+        <button onclick="deleteGoal('${goal.id}')" class="delete-btn absolute top-3 right-3 text-slate-600 hover:text-rose-500"><i class="fa-solid fa-xmark"></i></button>
+        <div class="flex justify-between items-end mb-2">
+          <div><h4 class="text-sm font-bold text-white">${goal.name}</h4><span class="text-xs text-slate-400">Meta: S/ ${goal.target.toFixed(2)}</span></div>
+          <div class="text-right"><span class="block text-xl font-black text-rose-400">${monthsRequired} <span class="text-xs text-slate-400 font-normal">meses</span></span><span class="text-[10px] text-slate-500">Aporte: S/ ${goal.monthly.toFixed(2)}/m</span></div>
+        </div>
+        <div class="w-full bg-slate-900 rounded-full h-1.5 mb-4"><div class="bg-rose-500 h-1.5 rounded-full" style="width: ${progress}%"></div></div>
+        <div class="bg-slate-900/50 p-3 rounded-lg border ${insight.color} text-xs"><strong class="block mb-1"><i class="fa-solid fa-bolt mr-1"></i>${insight.type}</strong>${insight.desc}</div>
+      </div>`;
+  });
 
   renderChart(monthData.expenses);
 }
