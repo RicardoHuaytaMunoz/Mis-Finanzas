@@ -1,9 +1,9 @@
 // ==========================================
 // CONFIGURACIÓN Y ESTADO GLOBAL
 // ==========================================
-const UIT = 5350; // UIT 2026 (Proyectada)
+const UIT = 5350; 
 let chartInstance = null;
-let currentMonth = new Date().toISOString().slice(0, 7); // Formato YYYY-MM
+let currentMonth = new Date().toISOString().slice(0, 7); 
 let store = JSON.parse(localStorage.getItem('finops_db')) || {};
 
 // ==========================================
@@ -18,7 +18,11 @@ const dom = {
   expList: document.getElementById('expenseList'),
   chartFilter: document.getElementById('chartFilter'),
   labels: {
-    deductions: document.getElementById('lblDeductions'),
+    pensionName: document.getElementById('lblPensionName'),
+    pensionAmount: document.getElementById('lblPensionAmount'),
+    taxAmount: document.getElementById('lblTaxAmount'),
+    healthName: document.getElementById('lblHealthName'),
+    healthAmount: document.getElementById('lblHealthAmount'),
     net: document.getElementById('lblNet'),
     cts: document.getElementById('lblCts'),
     grati: document.getElementById('lblGrati')
@@ -38,13 +42,14 @@ function init() {
   dom.monthSelector.value = currentMonth;
   ensureMonthExists(currentMonth);
   
-  // Event Listeners
+  // Event Listeners (La clave para la reactividad en tiempo real)
   dom.monthSelector.addEventListener('change', (e) => {
     currentMonth = e.target.value;
     ensureMonthExists(currentMonth);
     renderAll();
   });
 
+  // 'input' detecta cada tecla presionada sin necesidad de botón
   dom.grossInput.addEventListener('input', updateIncomeData);
   dom.pensionType.addEventListener('change', updateIncomeData);
   dom.healthType.addEventListener('change', updateIncomeData);
@@ -55,16 +60,11 @@ function init() {
 }
 
 // ==========================================
-// LÓGICA DE NEGOCIO Y MODELO DE DATOS
+// LÓGICA DE NEGOCIO Y CÁLCULOS LEY PERÚ
 // ==========================================
 function ensureMonthExists(month) {
   if (!store[month]) {
-    store[month] = {
-      gross: 0,
-      pension: 'AFP',
-      health: 'ESSALUD',
-      expenses: []
-    };
+    store[month] = { gross: 0, pension: 'AFP', health: 'ESSALUD', expenses: [] };
     saveData();
   }
 }
@@ -74,28 +74,35 @@ function saveData() {
 }
 
 function calculatePayroll(gross, pension, health) {
+  // Tasas
   const pensionRate = (pension === "AFP") ? 0.125 : 0.13;
   const healthRate = (health === "ESSALUD") ? 0.09 : 0.0675;
   
+  // 1. Descuentos al trabajador
   const pensionDeduction = gross * pensionRate;
   
-  // Renta 5ta Categoría Simplificada
+  // Cálculo simplificado Renta 5ta (Exceso de 7 UIT)
   const annualGross = gross * 14;
   let annualTax = 0;
   if (annualGross > (7 * UIT)) {
     const taxable = annualGross - (7 * UIT);
-    annualTax = taxable * 0.08; // Primer tramo simplificado para el ejemplo
+    annualTax = taxable * 0.08; 
   }
-  
   const taxDeduction = annualTax / 12;
   const totalDeductions = pensionDeduction + taxDeduction;
   const net = gross - totalDeductions;
   
-  // Beneficios sociales
+  // 2. Aportes Empleador (No tocan el neto)
+  const healthContribution = gross * healthRate;
+
+  // 3. Provisiones de Ley
   const grati = gross + (gross * healthRate);
   const cts = (gross + (grati / 6)) / 2;
 
-  return { deductions: totalDeductions, net, grati, cts };
+  return { 
+    pensionRate, pensionDeduction, taxDeduction, net, 
+    healthRate, healthContribution, grati, cts 
+  };
 }
 
 // ==========================================
@@ -107,7 +114,7 @@ function updateIncomeData() {
   data.pension = dom.pensionType.value;
   data.health = dom.healthType.value;
   saveData();
-  renderAll();
+  renderAll(); // Refresca UI instantáneamente
 }
 
 function addExpense(e) {
@@ -118,8 +125,7 @@ function addExpense(e) {
 
   if (name && amount > 0) {
     store[currentMonth].expenses.push({
-      id: Date.now().toString(),
-      name, amount, category, paid: false
+      id: Date.now().toString(), name, amount, category, paid: false
     });
     saveData();
     dom.expForm.reset();
@@ -143,24 +149,39 @@ window.deleteExpense = function(id) {
 };
 
 // ==========================================
-// RENDERIZADO UI (VISTA)
+// RENDERIZADO UI (VISTA REACTIVA)
 // ==========================================
 function renderAll() {
   const data = store[currentMonth];
   
-  // 1. Inputs
-  dom.grossInput.value = data.gross > 0 ? data.gross : '';
+  if (document.activeElement !== dom.grossInput) {
+    dom.grossInput.value = data.gross > 0 ? data.gross : '';
+  }
   dom.pensionType.value = data.pension;
   dom.healthType.value = data.health;
 
-  // 2. Cálculos Planilla
+  // Render Cálculos Planilla
   const payroll = calculatePayroll(data.gross, data.pension, data.health);
-  dom.labels.deductions.innerText = `S/ ${payroll.deductions.toFixed(2)}`;
+  
+  dom.labels.pensionName.innerText = `${data.pension} (${(payroll.pensionRate * 100).toFixed(1)}%)`;
+  dom.labels.pensionAmount.innerText = `-S/ ${payroll.pensionDeduction.toFixed(2)}`;
+  dom.labels.taxAmount.innerText = `-S/ ${payroll.taxDeduction.toFixed(2)}`;
+  
+  dom.labels.healthName.innerText = `${data.health === 'ESSALUD' ? 'EsSalud' : 'EPS'} (${(payroll.healthRate * 100).toFixed(2)}%)`;
+  dom.labels.healthAmount.innerText = `+S/ ${payroll.healthContribution.toFixed(2)}`;
+  
   dom.labels.net.innerText = `S/ ${payroll.net.toFixed(2)}`;
   dom.labels.cts.innerText = `S/ ${payroll.cts.toFixed(2)}`;
   dom.labels.grati.innerText = `S/ ${payroll.grati.toFixed(2)}`;
 
-  // 3. Cálculos de Gastos
+  // Animación sutil de actualización
+  document.querySelectorAll('.value-update').forEach(el => {
+    el.classList.remove('update-flash');
+    void el.offsetWidth; 
+    el.classList.add('update-flash');
+  });
+
+  // Render Lista de Gastos
   let totalExp = 0, paidExp = 0;
   dom.expList.innerHTML = '';
   
@@ -189,7 +210,7 @@ function renderAll() {
     `;
   });
 
-  // 4. Actualizar KPIs
+  // Render KPIs
   const surplus = Math.max(0, payroll.net - totalExp);
   const healthRatio = payroll.net > 0 ? (totalExp / payroll.net) * 100 : 0;
 
@@ -200,7 +221,6 @@ function renderAll() {
   dom.kpis.health.innerText = `${healthRatio.toFixed(1)}%`;
   dom.kpis.health.className = `text-xl font-bold mt-1 ${healthRatio > 50 ? 'text-rose-400' : 'text-emerald-400'}`;
 
-  // 5. Actualizar Gráfico
   renderChart();
 }
 
@@ -211,7 +231,6 @@ function renderChart() {
 
   if (chartInstance) chartInstance.destroy();
 
-  // Agrupar gastos por categoría
   const grouped = data.expenses.reduce((acc, curr) => {
     acc[curr.category] = (acc[curr.category] || 0) + curr.amount;
     return acc;
@@ -235,8 +254,7 @@ function renderChart() {
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 10 } } } },
       scales: type === 'bar' ? {
         x: { grid: { display: false }, ticks: { color: '#cbd5e1', font: { size: 10 } } },
@@ -246,5 +264,4 @@ function renderChart() {
   });
 }
 
-// Inicializar app al cargar
 document.addEventListener('DOMContentLoaded', init);
