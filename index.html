@@ -405,4 +405,193 @@
     }
 
     function updateSurplusSplit() {
-      const 
+      const slider = document.getElementById("savingsSlider");
+      monthlyData[currentMonth].savingsPct = parseInt(slider.value);
+      render();
+    }
+
+    function resetCurrentMonth() {
+      if (confirm(`¿Deseas reiniciar los datos de ${currentMonth}?`)) {
+        delete monthlyData[currentMonth];
+        initMonthData(currentMonth);
+        loadMonthToUI();
+      }
+    }
+
+    function saveMonthRecord() {
+      saveToStorage();
+      alert(`¡Datos de ${currentMonth} guardados con éxito! El gráfico histórico ha sido actualizado.`);
+      updateHistoricalChart();
+    }
+
+    function loadMonthToUI() {
+      const data = monthlyData[currentMonth];
+      document.getElementById("grossSalary").value = data.gross;
+      document.getElementById("pensionType").value = data.pensionType;
+      document.getElementById("healthType").value = data.healthType;
+      document.getElementById("savingsSlider").value = data.savingsPct;
+      document.getElementById("customNetSalary").value = data.customNet ? data.customNet : "";
+      render();
+    }
+
+    function render() {
+      saveToStorage();
+      const data = monthlyData[currentMonth];
+      const payroll = calculatePayroll(data.gross, data.pensionType, data.healthType);
+      
+      const effectiveNet = data.customNet !== null ? data.customNet : payroll.netSalary;
+
+      // Actualizar Planilla en UI
+      document.getElementById("pensionDeduction").innerText = `-S/ ${payroll.pensionDeduction.toFixed(2)}`;
+      document.getElementById("taxDeduction").innerText = `-S/ ${payroll.monthlyTax.toFixed(2)}`;
+      document.getElementById("totalDeductions").innerText = `-S/ ${payroll.totalDeductions.toFixed(2)}`;
+      document.getElementById("netSalaryDisplay").innerText = `S/ ${effectiveNet.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      
+      document.getElementById("gratiDisplay").innerText = `S/ ${payroll.gratiAmount.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      document.getElementById("ctsDisplay").innerText = `S/ ${payroll.ctsAmount.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      // Render de Gastos Fijos
+      let totalFixed = 0;
+      let paidFixed = 0;
+      const listContainer = document.getElementById("expenseListContainer");
+      listContainer.innerHTML = "";
+
+      data.expenses.forEach(exp => {
+        totalFixed += exp.amount;
+        if (exp.paid) paidFixed += exp.amount;
+
+        listContainer.innerHTML += `
+          <div class="flex items-center justify-between p-2.5 rounded-xl border transition ${exp.paid ? 'bg-emerald-950/20 border-emerald-500/30' : 'bg-slate-950/80 border-slate-800'}">
+            <div class="flex items-center space-x-3">
+              <input type="checkbox" ${exp.paid ? 'checked' : ''} onchange="toggleExpensePaid(${exp.id})"
+                     class="w-4 h-4 rounded text-emerald-500 bg-slate-900 border-slate-700 focus:ring-0 cursor-pointer" />
+              <div>
+                <span class="text-xs font-medium ${exp.paid ? 'text-slate-300 line-through' : 'text-white'}">${exp.name}</span>
+                <span class="text-[10px] text-slate-500 block">${exp.category}</span>
+              </div>
+            </div>
+            <div class="flex items-center space-x-3">
+              <span class="text-xs font-bold ${exp.paid ? 'text-emerald-400' : 'text-slate-200'}">S/ ${exp.amount.toFixed(2)}</span>
+              <button onclick="removeExpense(${exp.id})" class="text-slate-600 hover:text-rose-400 text-xs p-1">
+                <i class="fa-solid fa-trash-can"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+
+      const pendingFixed = totalFixed - paidFixed;
+      const surplus = Math.max(0, effectiveNet - totalFixed);
+
+      document.getElementById("totalFixedAmount").innerText = `S/ ${totalFixed.toFixed(2)}`;
+      document.getElementById("paidExpensesCard").innerText = `S/ ${paidFixed.toFixed(2)}`;
+      document.getElementById("pendingExpensesCard").innerText = `S/ ${pendingFixed.toFixed(2)}`;
+      document.getElementById("freeSurplusCard").innerText = `S/ ${surplus.toFixed(2)}`;
+
+      // Distribución Excedente
+      const savingsPct = data.savingsPct;
+      const leisurePct = 100 - savingsPct;
+      document.getElementById("savingsPctLabel").innerText = `${savingsPct}%`;
+
+      const savingsAmount = surplus * (savingsPct / 100);
+      const leisureAmount = surplus * (leisurePct / 100);
+
+      document.getElementById("surplusSavingsAmount").innerText = `S/ ${savingsAmount.toFixed(2)}`;
+      document.getElementById("surplusLeisureAmount").innerText = `S/ ${leisureAmount.toFixed(2)}`;
+
+      updateHistoricalChart();
+    }
+
+    function updateHistoricalChart() {
+      const months = ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10", "2026-11", "2026-12"];
+      const labels = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Set", "Oct", "Nov", "Dic"];
+
+      const netData = [];
+      const expenseData = [];
+      const savingsData = [];
+
+      months.forEach(m => {
+        if (monthlyData[m]) {
+          const d = monthlyData[m];
+          const p = calculatePayroll(d.gross, d.pensionType, d.healthType);
+          const net = d.customNet !== null ? d.customNet : p.netSalary;
+          const expTotal = d.expenses.reduce((acc, curr) => acc + curr.amount, 0);
+          const surplus = Math.max(0, net - expTotal);
+          const sav = surplus * (d.savingsPct / 100);
+
+          netData.push(net);
+          expenseData.push(expTotal);
+          savingsData.push(sav);
+        } else {
+          netData.push(null);
+          expenseData.push(null);
+          savingsData.push(null);
+        }
+      });
+
+      const ctx = document.getElementById('historicalChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Sueldo Neto (S/)',
+              data: netData,
+              borderColor: '#34d399',
+              backgroundColor: 'rgba(52, 211, 153, 0.1)',
+              tension: 0.3,
+              fill: false,
+              borderWidth: 2.5
+            },
+            {
+              label: 'Gastos Fijos Totales (S/)',
+              data: expenseData,
+              borderColor: '#f87171',
+              backgroundColor: 'rgba(248, 113, 113, 0.1)',
+              tension: 0.3,
+              fill: false,
+              borderWidth: 2
+            },
+            {
+              label: 'Ahorro Efectivo (S/)',
+              data: savingsData,
+              borderColor: '#818cf8',
+              backgroundColor: 'rgba(129, 140, 248, 0.15)',
+              tension: 0.3,
+              fill: true,
+              borderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { labels: { color: '#cbd5e1', font: { size: 11 } } },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: S/ ${context.parsed.y ? context.parsed.y.toFixed(2) : '0.00'}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#1e293b' } },
+            y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#334155' } }
+          }
+        }
+      });
+    }
+
+    // Inicialización
+    window.onload = () => {
+      initMonthData(currentMonth);
+      loadMonthToUI();
+    };
+  </script>
+</body>
+</html>
