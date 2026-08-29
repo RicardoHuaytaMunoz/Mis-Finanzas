@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Control Financiero & Planificador de Ahorro</title>
+  <title>Control Financiero Pro - Nómina & Presupuesto</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
@@ -12,403 +12,397 @@
     body { font-family: 'Inter', sans-serif; }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen">
+<body class="bg-slate-950 text-slate-100 min-h-screen">
 
-  <nav class="bg-slate-800/80 backdrop-blur border-b border-slate-700 sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+  <!-- Navbar -->
+  <nav class="bg-slate-900/90 backdrop-blur border-b border-slate-800 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center space-x-3">
-        <div class="bg-emerald-500/20 text-emerald-400 p-2 rounded-lg">
-          <i class="fa-solid fa-wallet text-xl"></i>
+        <div class="bg-emerald-500/20 text-emerald-400 p-2.5 rounded-xl border border-emerald-500/30">
+          <i class="fa-solid fa-chart-pie text-xl"></i>
         </div>
         <div>
-          <h1 class="font-bold text-lg leading-none">FinanzApp</h1>
-          <span class="text-xs text-slate-400">Planificador & Evaluador Financiero</span>
+          <h1 class="font-bold text-lg tracking-tight text-white">FinanzApp Pro</h1>
+          <span class="text-xs text-slate-400">Planilla, Gastos Fijos, Ahorro e Histórico Mensual</span>
         </div>
       </div>
-      <button onclick="resetData()" class="text-xs text-rose-400 hover:text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-md transition">
-        <i class="fa-solid fa-trash-can mr-1"></i> Reiniciar Datos
-      </button>
+      <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700">
+          <label class="text-xs text-slate-400">Mes de Trabajo:</label>
+          <select id="selectedMonth" onchange="changeMonth()" class="bg-transparent text-xs font-semibold text-emerald-400 focus:outline-none">
+            <option value="2026-01">Enero 2026</option>
+            <option value="2026-02">Febrero 2026</option>
+            <option value="2026-03">Marzo 2026</option>
+            <option value="2026-04">Abril 2026</option>
+            <option value="2026-05">Mayo 2026 (CTS)</option>
+            <option value="2026-06">Junio 2026</option>
+            <option value="2026-07">Julio 2026 (Grati)</option>
+            <option value="2026-08" selected>Agosto 2026</option>
+            <option value="2026-09">Septiembre 2026</option>
+            <option value="2026-10">Octubre 2026</option>
+            <option value="2026-11">Noviembre 2026 (CTS)</option>
+            <option value="2026-12">Diciembre 2026 (Grati)</option>
+          </select>
+        </div>
+        <button onclick="resetCurrentMonth()" class="text-xs text-rose-400 hover:text-rose-300 border border-rose-500/30 px-3 py-1.5 rounded-lg transition">
+          <i class="fa-solid fa-rotate-left mr-1"></i> Reiniciar Mes
+        </button>
+      </div>
     </div>
   </nav>
 
-  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 flex flex-col justify-between">
+    <!-- Sección 1: Calculadora de Sueldo Bruto, Neto y Beneficios Sociales -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+      <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 mb-6 border-b border-slate-800 gap-2">
         <div>
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-base font-semibold text-slate-200">Ingreso Mensual Base</h2>
-            <span class="text-xs bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full">Principal</span>
-          </div>
-          <label class="text-xs text-slate-400">Ingresa tu sueldo o ingreso recurrente (S/ o $):</label>
-          <div class="mt-2 relative">
-            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 font-semibold">S/</span>
-            <input type="number" id="monthlyIncome" value="5000" oninput="updateDashboard()" 
-                   class="w-full pl-10 pr-4 py-2.5 bg-slate-900 border border-slate-700 rounded-lg text-lg font-bold text-emerald-400 focus:outline-none focus:border-emerald-500" />
-          </div>
-          <p class="text-xs text-slate-400 mt-2">Los presupuestos se calculan automáticamente según las reglas configuradas.</p>
-        </div>
-
-        <div class="mt-6 pt-4 border-t border-slate-700 grid grid-cols-2 gap-3 text-center">
-          <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/50">
-            <span class="text-xs text-slate-400 block">Total Gastado</span>
-            <span id="totalExpensesCard" class="text-base font-bold text-rose-400">S/ 0.00</span>
-          </div>
-          <div class="bg-slate-900/60 p-3 rounded-lg border border-slate-700/50">
-            <span class="text-xs text-slate-400 block">Saldo Restante</span>
-            <span id="remainingBalanceCard" class="text-base font-bold text-emerald-400">S/ 0.00</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-xl p-6">
-        <h2 class="text-base font-semibold text-slate-200 mb-4 flex items-center justify-between">
-          <span>Distribución Estratégica Sugerida</span>
-          <span class="text-xs text-slate-400">Objetivo: 100%</span>
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-3" id="categoryDistributionCards">
-          </div>
-      </div>
-    </div>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
-        <h2 class="text-base font-semibold text-slate-200 mb-4">Registrar Movimiento</h2>
-        <form id="txForm" onsubmit="addTransaction(event)" class="space-y-4 text-sm">
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Descripción</label>
-            <input type="text" id="txDesc" placeholder="Ej. Alquiler, Cuota auto, Curso AWS" required
-                   class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-500" />
-          </div>
-          <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Monto (S/)</label>
-              <input type="number" step="0.01" id="txAmount" placeholder="0.00" required
-                     class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-500" />
-            </div>
-            <div>
-              <label class="block text-xs text-slate-400 mb-1">Categoría</label>
-              <select id="txCategory" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none focus:border-indigo-500">
-                <option value="Gastos Fijos">Gastos Fijos (40%)</option>
-                <option value="Ahorro / Inversión">Ahorro / Inversión (20%)</option>
-                <option value="Deudas / Créditos">Deudas / Créditos (15%)</option>
-                <option value="Estudios / Crecimiento">Estudios (15%)</option>
-                <option value="Compras / Ocio">Compras / Ocio (10%)</option>
-              </select>
-            </div>
-          </div>
-          <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 rounded-lg transition duration-150">
-            <i class="fa-solid fa-plus mr-1"></i> Agregar Movimiento
-          </button>
-        </form>
-      </div>
-
-      <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 flex flex-col items-center justify-center">
-        <h2 class="text-base font-semibold text-slate-200 mb-2 w-full text-left">Ejecución de Gastos vs Límite</h2>
-        <div class="w-full h-56 relative">
-          <canvas id="expenseChart"></canvas>
-        </div>
-      </div>
-
-      <div class="bg-slate-800 border border-slate-700 rounded-xl p-6 flex flex-col justify-between">
-        <h2 class="text-base font-semibold text-slate-200 mb-3">Últimos Movimientos</h2>
-        <div id="txList" class="space-y-2 overflow-y-auto max-h-56 pr-1 text-xs">
-          </div>
-      </div>
-    </div>
-
-    <div class="bg-slate-800 border border-slate-700 rounded-xl p-6">
-      <div class="flex flex-col md:flex-row md:items-center justify-between mb-6 pb-4 border-b border-slate-700">
-        <div>
-          <h2 class="text-lg font-bold text-slate-100 flex items-center">
-            <i class="fa-solid fa-chart-line text-emerald-400 mr-2"></i> Evaluador de Rendimiento & Ahorro
+          <h2 class="text-base font-bold text-slate-100 flex items-center">
+            <i class="fa-solid fa-receipt text-indigo-400 mr-2"></i> Estructura de Ingresos & Beneficios de Ley (Perú)
           </h2>
-          <p class="text-xs text-slate-400">Compara cuánto ganaría tu dinero en cuentas de alto rendimiento, cajas municipales (DPF) o inversión.</p>
+          <p class="text-xs text-slate-400">Calcula tu sueldo neto a partir del bruto (o viceversa) junto a tus provisiones de CTS y Gratificaciones.</p>
         </div>
-        <div class="mt-4 md:mt-0 flex items-center space-x-3 text-xs">
-          <span class="bg-blue-500/10 text-blue-400 border border-blue-500/20 px-2.5 py-1 rounded-md">Fondo Seguro Depósitos (FSD) Cubierto</span>
-        </div>
+        <span class="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 px-3 py-1 rounded-full w-max">Régimen General 728</span>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div class="space-y-4 text-sm">
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Monto a Invertir / Ahorrar</label>
-            <input type="number" id="simCapital" value="10000" oninput="runSimulation()"
-                   class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-emerald-400 font-semibold focus:outline-none" />
+        <!-- Input Sueldo Bruto -->
+        <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-3">
+          <label class="block text-xs font-medium text-slate-300">Sueldo Bruto Mensual (S/)</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 font-semibold">S/</span>
+            <input type="number" id="grossSalary" value="6500" oninput="calculatePayrollFromGross()"
+                   class="w-full pl-9 pr-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-lg font-bold text-white focus:outline-none focus:border-indigo-500" />
           </div>
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Aporte Mensual Extra</label>
-            <input type="number" id="simMonthly" value="500" oninput="runSimulation()"
-                   class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-emerald-400 font-semibold focus:outline-none" />
-          </div>
-          <div>
-            <label class="block text-xs text-slate-400 mb-1">Horizonte de Tiempo</label>
-            <select id="simYears" onchange="runSimulation()" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg focus:outline-none">
-              <option value="1">1 año (12 meses)</option>
-              <option value="2">2 años (24 meses)</option>
-              <option value="3">3 años (36 meses)</option>
-              <option value="5" selected>5 años (60 meses)</option>
-            </select>
+          <div class="text-[11px] text-slate-400 space-y-1">
+            <div class="flex justify-between">
+              <span>Régimen Pensionario:</span>
+              <select id="pensionType" onchange="calculatePayrollFromGross()" class="bg-slate-900 text-slate-300 rounded border border-slate-700 text-[11px] px-1 py-0.5">
+                <option value="AFP">AFP (~12.5%)</option>
+                <option value="ONP">ONP (13.0%)</option>
+              </select>
+            </div>
+            <div class="flex justify-between items-center">
+              <span>Seguro de Salud:</span>
+              <select id="healthType" onchange="calculatePayrollFromGross()" class="bg-slate-900 text-slate-300 rounded border border-slate-700 text-[11px] px-1 py-0.5">
+                <option value="ESSALUD">EsSalud (9%)</option>
+                <option value="EPS">EPS (6.75%)</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div class="md:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4" id="simResultsCards">
+        <!-- Descuentos de Planilla -->
+        <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800 flex flex-col justify-between">
+          <span class="text-xs text-slate-400 block font-medium">Descuentos de Planilla</span>
+          <div class="space-y-1.5 my-2">
+            <div class="flex justify-between text-xs text-slate-300">
+              <span>Aporte Pensión:</span>
+              <span id="pensionDeduction" class="font-semibold text-rose-400">-S/ 0.00</span>
+            </div>
+            <div class="flex justify-between text-xs text-slate-300">
+              <span>Renta 5ta Categoría:</span>
+              <span id="taxDeduction" class="font-semibold text-rose-400">-S/ 0.00</span>
+            </div>
+            <div class="flex justify-between text-xs font-bold pt-1 border-t border-slate-800 text-slate-200">
+              <span>Total Retenciones:</span>
+              <span id="totalDeductions" class="text-rose-400">-S/ 0.00</span>
+            </div>
           </div>
+          <span class="text-[10px] text-slate-500">*Proyección anual basada en UIT vigente.</span>
+        </div>
+
+        <!-- Sueldo Neto Disponible -->
+        <div class="bg-gradient-to-br from-emerald-950/40 to-slate-900 p-4 rounded-xl border border-emerald-500/40 flex flex-col justify-between">
+          <div>
+            <span class="text-xs text-emerald-400 block font-semibold">Sueldo Neto a Recibir</span>
+            <div class="mt-2 text-2xl font-black text-emerald-400" id="netSalaryDisplay">S/ 0.00</div>
+            <p class="text-[11px] text-slate-400 mt-1">Líquido disponible en cuenta para presupuesto mensual.</p>
+          </div>
+          <div class="pt-2">
+            <span class="text-[11px] text-slate-400">¿Deseas fijar un Neto exacto?</span>
+            <input type="number" id="customNetSalary" placeholder="Ingresar Neto directo" oninput="setCustomNet(this.value)"
+                   class="w-full mt-1 px-2.5 py-1 bg-slate-900 border border-slate-700 rounded text-xs text-emerald-300 focus:outline-none" />
+          </div>
+        </div>
+
+        <!-- Beneficios Sociales (CTS y Grati) -->
+        <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800 space-y-2.5">
+          <span class="text-xs text-indigo-300 block font-semibold"><i class="fa-solid fa-gift mr-1"></i> Proyecciones del Periodo</span>
+          <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-xs">
+            <div class="flex justify-between text-slate-300">
+              <span>Gratificación (Jul/Dic):</span>
+              <span id="gratiDisplay" class="font-bold text-indigo-400">S/ 0.00</span>
+            </div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Incluye bonificación extraordinaria</div>
+          </div>
+          <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-xs">
+            <div class="flex justify-between text-slate-300">
+              <span>CTS Semestral (May/Nov):</span>
+              <span id="ctsDisplay" class="font-bold text-indigo-400">S/ 0.00</span>
+            </div>
+            <div class="text-[10px] text-slate-500 mt-0.5">Depósito intangible en entidad elegida</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección 2: Gastos Fijos, Marcado y Distribución -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Lista de Gastos Fijos (Con Checkbox) -->
+      <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between">
+        <div>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-4 border-b border-slate-800 gap-2">
+            <div>
+              <h2 class="text-base font-bold text-slate-100 flex items-center">
+                <i class="fa-solid fa-list-check text-emerald-400 mr-2"></i> Gastos Fijos & Obligaciones
+              </h2>
+              <p class="text-xs text-slate-400">Marca los gastos conforme los vas pagando en el mes.</p>
+            </div>
+            <div class="text-xs text-slate-400">
+              Total Fijos: <span id="totalFixedAmount" class="font-bold text-white">S/ 0.00</span>
+            </div>
+          </div>
+
+          <!-- Formulario agregar gasto rápido -->
+          <form onsubmit="addCustomExpense(event)" class="grid grid-cols-1 sm:grid-cols-12 gap-2 mb-4">
+            <input type="text" id="newExpenseName" placeholder="Nuevo gasto (Ej. Seguro, Tarjeta)" required
+                   class="sm:col-span-6 px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs focus:outline-none focus:border-indigo-500" />
+            <input type="number" step="0.01" id="newExpenseAmount" placeholder="Monto (S/)" required
+                   class="sm:col-span-3 px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs focus:outline-none focus:border-indigo-500" />
+            <button type="submit" class="sm:col-span-3 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-1.5 px-3 rounded-lg text-xs transition">
+              <i class="fa-solid fa-plus mr-1"></i> Añadir
+            </button>
+          </form>
+
+          <!-- Tabla/Lista de gastos con check -->
+          <div id="expenseListContainer" class="space-y-2 max-h-72 overflow-y-auto pr-1">
+            <!-- Dinámico -->
+          </div>
+        </div>
+
+        <div class="mt-4 pt-4 border-t border-slate-800 grid grid-cols-2 sm:grid-cols-3 gap-3 text-center text-xs">
+          <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+            <span class="text-slate-400 block">Total Pagado:</span>
+            <span id="paidExpensesCard" class="font-bold text-emerald-400 text-sm">S/ 0.00</span>
+          </div>
+          <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+            <span class="text-slate-400 block">Por Pagar:</span>
+            <span id="pendingExpensesCard" class="font-bold text-amber-400 text-sm">S/ 0.00</span>
+          </div>
+          <div class="col-span-2 sm:col-span-1 bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+            <span class="text-slate-400 block">Excedente Libre:</span>
+            <span id="freeSurplusCard" class="font-bold text-indigo-400 text-sm">S/ 0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Planificación del Excedente: Ahorro vs Ocio -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between space-y-4">
+        <div>
+          <h2 class="text-base font-bold text-slate-100 flex items-center mb-1">
+            <i class="fa-solid fa-piggy-bank text-amber-400 mr-2"></i> Asignación del Excedente
+          </h2>
+          <p class="text-xs text-slate-400 mb-4">Distribuye el saldo libre restante tras cubrir todos los gastos fijos.</p>
+
+          <div class="space-y-4">
+            <div>
+              <div class="flex justify-between text-xs text-slate-300 mb-1">
+                <span>% Destinado a Ahorro / Inversión:</span>
+                <span id="savingsPctLabel" class="font-bold text-emerald-400">70%</span>
+              </div>
+              <input type="range" id="savingsSlider" min="0" max="100" value="70" step="5" oninput="updateSurplusSplit()"
+                     class="w-full accent-emerald-500 bg-slate-800 rounded-lg cursor-pointer" />
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="bg-slate-950 p-3.5 rounded-xl border border-emerald-500/30">
+                <span class="text-[11px] text-emerald-400 font-semibold block"><i class="fa-solid fa-vault mr-1"></i> Ahorro / Inversión</span>
+                <span id="surplusSavingsAmount" class="text-base font-extrabold text-white mt-1 block">S/ 0.00</span>
+                <span class="text-[10px] text-slate-500">Cajas / DPF / Fondo</span>
+              </div>
+              <div class="bg-slate-950 p-3.5 rounded-xl border border-amber-500/30">
+                <span class="text-[11px] text-amber-400 font-semibold block"><i class="fa-solid fa-gamepad mr-1"></i> Ocio / Flexible</span>
+                <span id="surplusLeisureAmount" class="text-base font-extrabold text-white mt-1 block">S/ 0.00</span>
+                <span class="text-[10px] text-slate-500">Salidas / Compras</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button onclick="saveMonthRecord()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-xl text-xs transition flex items-center justify-center">
+          <i class="fa-solid fa-floppy-disk mr-2"></i> Guardar Cierre de Este Mes
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Sección 3: Histórico y Gráfico Evolutivo Mes a Mes -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-4 border-b border-slate-800 gap-2">
+        <div>
+          <h2 class="text-base font-bold text-slate-100 flex items-center">
+            <i class="fa-solid fa-timeline text-indigo-400 mr-2"></i> Línea Histórica & Comparativa Mensual
+          </h2>
+          <p class="text-xs text-slate-400">Evolución de tus Ingresos Netos, Gastos Totales y Capacidad de Ahorro a lo largo del año.</p>
+        </div>
+        <div class="text-xs text-slate-400 flex items-center space-x-2">
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400"></span> <span>Neto</span>
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-rose-400 ml-2"></span> <span>Gastos</span>
+          <span class="inline-block w-2.5 h-2.5 rounded-full bg-indigo-400 ml-2"></span> <span>Ahorro</span>
+        </div>
+      </div>
+
+      <div class="w-full h-72">
+        <canvas id="historicalChart"></canvas>
       </div>
     </div>
 
   </main>
 
   <script>
-    // Configuración base de porcentajes
-    const CATEGORIES = {
-      "Gastos Fijos": { pct: 0.40, color: "#38bdf8", icon: "fa-house" },
-      "Ahorro / Inversión": { pct: 0.20, color: "#34d399", icon: "fa-piggy-bank" },
-      "Deudas / Créditos": { pct: 0.15, color: "#f87171", icon: "fa-credit-card" },
-      "Estudios / Crecimiento": { pct: 0.15, color: "#a78bfa", icon: "fa-graduation-cap" },
-      "Compras / Ocio": { pct: 0.10, color: "#fbbf24", icon: "fa-bag-shopping" }
-    };
+    // Parámetros Tributarios y Laborales Perú (UIT 2026 proyectada)
+    const UIT = 5350; 
 
-    let transactions = JSON.parse(localStorage.getItem("tx_data")) || [
-      { id: 1, desc: "Alquiler / Servicios", amount: 1400, category: "Gastos Fijos", date: "2026-08-01" },
-      { id: 2, desc: "Aporte Fondo Emergencia", amount: 1000, category: "Ahorro / Inversión", date: "2026-08-02" },
-      { id: 3, desc: "Certificación / Convalidación", amount: 450, category: "Estudios / Crecimiento", date: "2026-08-05" }
+    // Lista base de gastos fijos
+    const DEFAULT_EXPENSES = [
+      { id: 1, name: "Pago de Inglés", amount: 350, paid: true, category: "Educación" },
+      { id: 2, name: "Pago de Universidad / Convalidación", amount: 750, paid: true, category: "Educación" },
+      { id: 3, name: "Cuota del Carro / Seguro", amount: 1100, paid: false, category: "Transporte" },
+      { id: 4, name: "Internet & Telefonía", amount: 160, paid: true, category: "Servicios" },
+      { id: 5, name: "Vivienda / Alquiler / Mantenimiento", amount: 1200, paid: false, category: "Hogar" },
+      { id: 6, name: "Alimentación / Supermercado", amount: 800, paid: true, category: "Alimentación" }
     ];
 
+    let monthlyData = JSON.parse(localStorage.getItem("finanzapp_master_data")) || {};
+    let currentMonth = "2026-08";
     let chartInstance = null;
 
-    function saveTransactions() {
-      localStorage.setItem("tx_data", JSON.stringify(transactions));
-    }
-
-    function addTransaction(e) {
-      e.preventDefault();
-      const desc = document.getElementById("txDesc").value.trim();
-      const amount = parseFloat(document.getElementById("txAmount").value);
-      const category = document.getElementById("txCategory").value;
-
-      if (!desc || isNaN(amount) || amount <= 0) return;
-
-      transactions.unshift({
-        id: Date.now(),
-        desc,
-        amount,
-        category,
-        date: new Date().toISOString().split("T")[0]
-      });
-
-      saveTransactions();
-      document.getElementById("txForm").reset();
-      updateDashboard();
-    }
-
-    function removeTransaction(id) {
-      transactions = transactions.filter(t => t.id !== id);
-      saveTransactions();
-      updateDashboard();
-    }
-
-    function resetData() {
-      if (confirm("¿Estás seguro de reiniciar los movimientos y presupuestos?")) {
-        transactions = [];
-        saveTransactions();
-        updateDashboard();
+    function initMonthData(m) {
+      if (!monthlyData[m]) {
+        monthlyData[m] = {
+          gross: 6500,
+          pensionType: "AFP",
+          healthType: "ESSALUD",
+          customNet: null,
+          expenses: JSON.parse(JSON.stringify(DEFAULT_EXPENSES)),
+          savingsPct: 70
+        };
       }
     }
 
-    function updateDashboard() {
-      const income = parseFloat(document.getElementById("monthlyIncome").value) || 0;
-      let totalSpent = 0;
-      const spentByCategory = {};
-
-      Object.keys(CATEGORIES).forEach(k => spentByCategory[k] = 0);
-
-      transactions.forEach(t => {
-        totalSpent += t.amount;
-        if (spentByCategory[t.category] !== undefined) {
-          spentByCategory[t.category] += t.amount;
-        }
-      });
-
-      const remaining = income - totalSpent;
-      document.getElementById("totalExpensesCard").innerText = `S/ ${totalSpent.toFixed(2)}`;
-      document.getElementById("remainingBalanceCard").innerText = `S/ ${remaining.toFixed(2)}`;
-      document.getElementById("remainingBalanceCard").className = `text-base font-bold ${remaining >= 0 ? 'text-emerald-400' : 'text-rose-400'}`;
-
-      // Render Categorías
-      const catContainer = document.getElementById("categoryDistributionCards");
-      catContainer.innerHTML = "";
-
-      Object.entries(CATEGORIES).forEach(([name, cfg]) => {
-        const allocated = income * cfg.pct;
-        const spent = spentByCategory[name] || 0;
-        const pctUsed = allocated > 0 ? (spent / allocated) * 100 : 0;
-
-        catContainer.innerHTML += `
-          <div class="bg-slate-900/70 p-3 rounded-lg border border-slate-700/60 flex flex-col justify-between">
-            <div>
-              <div class="flex items-center justify-between text-xs text-slate-300 mb-1">
-                <span class="truncate"><i class="fa-solid ${cfg.icon} mr-1" style="color:${cfg.color}"></i>${name}</span>
-                <span class="font-bold text-slate-400">${(cfg.pct * 100)}%</span>
-              </div>
-              <div class="text-sm font-semibold text-slate-100">S/ ${allocated.toFixed(0)}</div>
-              <div class="text-[11px] text-slate-400">Gastado: S/ ${spent.toFixed(0)}</div>
-            </div>
-            <div class="w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
-              <div class="h-1.5 rounded-full ${pctUsed > 100 ? 'bg-rose-500' : 'bg-emerald-500'}" style="width: ${Math.min(pctUsed, 100)}%"></div>
-            </div>
-          </div>
-        `;
-      });
-
-      // Render Historial
-      const listContainer = document.getElementById("txList");
-      if (transactions.length === 0) {
-        listContainer.innerHTML = `<p class="text-slate-500 text-center py-4">No hay movimientos registrados.</p>`;
-      } else {
-        listContainer.innerHTML = transactions.map(t => `
-          <div class="flex items-center justify-between p-2 rounded bg-slate-900/60 border border-slate-800">
-            <div>
-              <div class="font-medium text-slate-200">${t.desc}</div>
-              <div class="text-[10px] text-slate-400">${t.category} • ${t.date}</div>
-            </div>
-            <div class="flex items-center space-x-2">
-              <span class="font-semibold text-rose-400">-S/ ${t.amount.toFixed(2)}</span>
-              <button onclick="removeTransaction(${t.id})" class="text-slate-500 hover:text-rose-400 p-1">
-                <i class="fa-solid fa-xmark"></i>
-              </button>
-            </div>
-          </div>
-        `).join("");
-      }
-
-      updateChart(income, spentByCategory);
-      runSimulation();
+    function saveToStorage() {
+      localStorage.setItem("finanzapp_master_data", JSON.stringify(monthlyData));
     }
 
-    function updateChart(income, spentByCategory) {
-      const labels = Object.keys(CATEGORIES);
-      const allocatedData = labels.map(k => income * CATEGORIES[k].pct);
-      const spentData = labels.map(k => spentByCategory[k] || 0);
+    function calculatePayroll(gross, pensionType, healthType) {
+      // 1. Aporte Pensionario
+      let pensionRate = (pensionType === "AFP") ? 0.125 : 0.13; // AFP fondo+comisión+seguro ~12.5% o ONP 13%
+      let pensionDeduction = gross * pensionRate;
 
-      const ctx = document.getElementById('expenseChart').getContext('2d');
-      if (chartInstance) chartInstance.destroy();
+      // 2. Proyección Impuesto 5ta Categoría
+      // 14 sueldos brutos al año (12 ordinarios + 2 gratificaciones)
+      let annualGross = gross * 14;
+      let deduction7UIT = 7 * UIT;
+      let netTaxableIncome = Math.max(0, annualGross - deduction7UIT);
 
-      chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels.map(l => l.split(" ")[0]),
-          datasets: [
-            {
-              label: 'Presupuestado',
-              data: allocatedData,
-              backgroundColor: 'rgba(56, 189, 248, 0.4)',
-              borderColor: '#38bdf8',
-              borderWidth: 1
-            },
-            {
-              label: 'Gastado Real',
-              data: spentData,
-              backgroundColor: 'rgba(244, 63, 94, 0.6)',
-              borderColor: '#f43f5e',
-              borderWidth: 1
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { labels: { color: '#cbd5e1', font: { size: 10 } } }
-          },
-          scales: {
-            x: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { display: false } },
-            y: { ticks: { color: '#94a3b8', font: { size: 10 } }, grid: { color: '#334155' } }
-          }
-        }
-      });
-    }
+      let annualTax = 0;
+      let rem = netTaxableIncome;
 
-    // Simulador de Interés Compuesto
-    function calculateCompoundInterest(P, PMT, annualRate, years) {
-      const r = annualRate / 12;
-      const n = years * 12;
-      let total = P;
-      for (let i = 0; i < n; i++) {
-        total = total * (1 + r) + PMT;
-      }
-      return total;
-    }
-
-    function runSimulation() {
-      const capital = parseFloat(document.getElementById("simCapital").value) || 0;
-      const monthly = parseFloat(document.getElementById("simMonthly").value) || 0;
-      const years = parseInt(document.getElementById("simYears").value) || 1;
-
-      const totalContributions = capital + (monthly * years * 12);
-
-      const options = [
-        {
-          name: "Cuenta Digital / Ahorro Flexible",
-          rate: 0.05, // 5% TREA
-          tag: "Alta Liquidez (Fondo de Emergencia)",
-          desc: "Disponibilidad inmediata de tu dinero con rendimientos diarios.",
-          color: "border-blue-500/40"
-        },
-        {
-          name: "Depósito a Plazo Fijo (Cajas)",
-          rate: 0.075, // 7.5% TREA
-          tag: "Mediano Plazo (Meta Fija)",
-          desc: "Tasa fija garantizada. Ideal para plazos de 12 a 24 meses.",
-          color: "border-emerald-500/40"
-        },
-        {
-          name: "Inversión Indexada / Fondos",
-          rate: 0.10, // 10% estimado
-          tag: "Crecimiento Largo Plazo",
-          desc: "Mayor potencial de rentabilidad asumiendo volatilidad moderada.",
-          color: "border-purple-500/40"
-        }
+      // Escala progresiva acumulativa de 5ta categoría
+      const brackets = [
+        { limit: 5 * UIT, rate: 0.08 },
+        { limit: 20 * UIT, rate: 0.14 },
+        { limit: 35 * UIT, rate: 0.17 },
+        { limit: 45 * UIT, rate: 0.20 }
       ];
 
-      const resContainer = document.getElementById("simResultsCards");
-      resContainer.innerHTML = "";
+      for (let b of brackets) {
+        if (rem > 0) {
+          let chunk = Math.min(rem, b.limit);
+          annualTax += chunk * b.rate;
+          rem -= chunk;
+        }
+      }
+      if (rem > 0) annualTax += rem * 0.30;
 
-      options.forEach(opt => {
-        const finalValue = calculateCompoundInterest(capital, monthly, opt.rate, years);
-        const gain = finalValue - totalContributions;
+      let monthlyTax = annualTax / 12;
+      let netSalary = gross - pensionDeduction - monthlyTax;
 
-        resContainer.innerHTML += `
-          <div class="bg-slate-900 p-4 rounded-xl border ${opt.color} flex flex-col justify-between">
-            <div>
-              <span class="text-[10px] font-semibold text-slate-400 bg-slate-800 px-2 py-0.5 rounded">${opt.tag}</span>
-              <h3 class="font-bold text-sm text-slate-100 mt-2">${opt.name}</h3>
-              <p class="text-[11px] text-slate-400 mt-1">${opt.desc}</p>
-              <div class="text-xs text-emerald-400 font-semibold mt-2">Tasa Estimada: ${(opt.rate * 100).toFixed(1)}% anual</div>
-            </div>
-            
-            <div class="mt-4 pt-3 border-t border-slate-800">
-              <div class="flex justify-between items-baseline">
-                <span class="text-xs text-slate-400">Total Acumulado:</span>
-                <span class="text-base font-bold text-emerald-300">S/ ${finalValue.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-              <div class="flex justify-between text-[11px] text-slate-400 mt-1">
-                <span>Ganancia Neta:</span>
-                <span class="text-emerald-400 font-medium">+S/ ${gain.toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-              </div>
-            </div>
-          </div>
-        `;
-      });
+      // 3. Beneficios Sociales
+      let healthRate = (healthType === "ESSALUD") ? 0.09 : 0.0675;
+      let gratiAmount = gross + (gross * healthRate); // 1 sueldo + bono extraordinario
+      let ctsAmount = (gross + (gratiAmount / 6)) / 2; // Semestral
+
+      return {
+        gross,
+        pensionDeduction,
+        monthlyTax,
+        totalDeductions: pensionDeduction + monthlyTax,
+        netSalary,
+        gratiAmount,
+        ctsAmount
+      };
     }
 
-    // Inicialización
-    window.onload = () => {
-      updateDashboard();
-    };
-  </script>
-</body>
-</html>
+    function changeMonth() {
+      currentMonth = document.getElementById("selectedMonth").value;
+      initMonthData(currentMonth);
+      loadMonthToUI();
+    }
+
+    function calculatePayrollFromGross() {
+      const data = monthlyData[currentMonth];
+      data.gross = parseFloat(document.getElementById("grossSalary").value) || 0;
+      data.pensionType = document.getElementById("pensionType").value;
+      data.healthType = document.getElementById("healthType").value;
+      data.customNet = null;
+      document.getElementById("customNetSalary").value = "";
+      render();
+    }
+
+    function setCustomNet(val) {
+      const parsed = parseFloat(val);
+      if (!isNaN(parsed) && parsed > 0) {
+        monthlyData[currentMonth].customNet = parsed;
+      } else {
+        monthlyData[currentMonth].customNet = null;
+      }
+      render();
+    }
+
+    function toggleExpensePaid(id) {
+      const exp = monthlyData[currentMonth].expenses.find(e => e.id === id);
+      if (exp) {
+        exp.paid = !exp.paid;
+        render();
+      }
+    }
+
+    function removeExpense(id) {
+      monthlyData[currentMonth].expenses = monthlyData[currentMonth].expenses.filter(e => e.id !== id);
+      render();
+    }
+
+    function addCustomExpense(e) {
+      e.preventDefault();
+      const name = document.getElementById("newExpenseName").value.trim();
+      const amount = parseFloat(document.getElementById("newExpenseAmount").value);
+      if (!name || isNaN(amount) || amount <= 0) return;
+
+      monthlyData[currentMonth].expenses.push({
+        id: Date.now(),
+        name,
+        amount,
+        paid: false,
+        category: "Otros"
+      });
+
+      document.getElementById("newExpenseName").value = "";
+      document.getElementById("newExpenseAmount").value = "";
+      render();
+    }
+
+    function updateSurplusSplit() {
+      const 
